@@ -1,0 +1,118 @@
+{
+  "P_001": {
+    "asset_type": "Pipe / Feed Line",
+    "material": "Slurry",
+    "source": "Wash Cyclone",
+    "destination": "Pump Box (PB_001)",
+    "csv_columns": [
+      "Feed Solid Flow",
+      "Feed BPL",
+      "Feed P80",
+      "Feed Solid Fraction"
+    ]
+  },
+  "P_101": {
+    "asset_type": "Pipe / Feed Line",
+    "material": "Process Water",
+    "source": "PW Basin",
+    "destination": "Pump Box (PB_001)",
+    "csv_columns": [
+      "Process Water Solid Flow",
+      "Process Water Solid Fraction"
+    ]
+  },
+  "PB_001": {
+    "asset_type": "Equipment / Pump Box",
+    "material": "Mixed Slurry",
+    "source": ["P_001", "P_101", "P_005"],
+    "destination": "P_002",
+    "csv_columns": []
+  },
+  "P_002": {
+    "asset_type": "Pipe / Transfer Line",
+    "material": "Mixed Slurry",
+    "source": "Pump Box (PB_001)",
+    "destination": "Centrifugal Pump (SP_001)",
+    "csv_columns": []
+  },
+  "SP_001": {
+    "asset_type": "Equipment / Centrifugal Pump",
+    "material": "Mixed Slurry",
+    "source": "P_002",
+    "destination": "P_003",
+    "csv_columns": []
+  },
+  "P_003": {
+    "asset_type": "Pipe / Feed Line",
+    "material": "Mixed Slurry",
+    "source": "Centrifugal Pump (SP_001)",
+    "destination": "Hydrocyclone Cluster (CY_001)",
+    "csv_columns": [
+      "Cyclone Feed Solid Flow",
+      "Cyclone Feed BPL",
+      "Cyclone Feed P80",
+      "Cyclone Feed Solid Fraction"
+    ]
+  },
+  "CY_001": {
+    "asset_type": "Equipment / Hydrocyclone Cluster",
+    "material": "Slurry",
+    "source": "P_003",
+    "destination": ["P_004 (Underflow)", "P_006 (Overflow)"],
+    "csv_columns": []
+  },
+  "P_004": {
+    "asset_type": "Pipe / Underflow Line",
+    "material": "Coarse Slurry",
+    "source": "Hydrocyclone Cluster (CY_001)",
+    "destination": "Ball Mill (BM_001)",
+    "csv_columns": [
+      "Cyclone Underflow Solid Flow",
+      "Cyclone Underflow BPL",
+      "Cyclone Underflow P80",
+      "Cyclone Underflow Solid Fraction"
+    ]
+  },
+  "BM_001": {
+    "asset_type": "Equipment / Ball Mill",
+    "material": "Coarse Slurry",
+    "source": "P_004",
+    "destination": "P_005",
+    "csv_columns": []
+  },
+  "P_005": {
+    "asset_type": "Pipe / Discharge Line",
+    "material": "Ground Slurry",
+    "source": "Ball Mill (BM_001)",
+    "destination": "Pump Box (PB_001)",
+    "csv_columns": [
+      "Ball Mill Discharge Solid Flow",
+      "Ball Mill Discharge BPL",
+      "Ball Mill Discharge P80",
+      "Ball Mill Discharge Solid Fraction"
+    ]
+  },
+  "P_006": {
+    "asset_type": "Pipe / Overflow Line",
+    "material": "Fine Slurry",
+    "source": "Hydrocyclone Cluster (CY_001)",
+    "destination": "Slurry_Out (To Flotation)",
+    "csv_columns": [
+      "Output Slurry Solid Flow",
+      "Output Slurry BPL",
+      "Output Slurry P80",
+      "Output Slurry Solid Fraction"
+    ]
+  },
+  "System_Global": {
+    "asset_type": "System / Meta Data",
+    "material": "N/A",
+    "source": "SysCAD Simulation Engine",
+    "destination": "N/A",
+    "csv_columns": [
+      "RecordNo",
+      "Time",
+      "ElapsedHrs"
+    ]
+  }
+}
