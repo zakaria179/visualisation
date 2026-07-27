@@ -1,13 +1,38 @@
 services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: digital_twin_mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
   backend:
     build: ./backend
+    container_name: digital_twin_backend
     ports:
       - "8000:8000"
+    environment:
+      - MQTT_BROKER_HOST=mosquitto
+      - MQTT_BROKER_PORT=1883
     volumes:
-      - ./data:/data
+      - .:/data
+      - ./backend/app:/app/app
+    depends_on:
+      - mosquitto
+
+  mqtt-publisher:
+    build: ./backend
+    container_name: digital_twin_mqtt_publisher
+    command: python3 /data/mqtt_publisher.py --host mosquitto --port 1883 --speedup 60 --registry /data/tag_mapping_registry.csv --process-csv /data/process_flow_timeseries.csv --health-csv /data/machine_health_timeseries.csv
+    volumes:
+      - .:/data
+    depends_on:
+      - mosquitto
 
   frontend:
     build: ./frontend
+    container_name: digital_twin_frontend
     ports:
       - "5173:5173"
     volumes:

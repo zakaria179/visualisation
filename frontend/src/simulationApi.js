@@ -1,7 +1,7 @@
 const API_BASE = "http://localhost:8000";
 
 /**
- * REST API client for the SysCAD Simulation Engine.
+ * REST API client for the SysCAD Simulation Engine & MQTT Live Telemetry.
  */
 export async function getSimulationStatus() {
   const res = await fetch(`${API_BASE}/simulation/status`);
@@ -46,5 +46,17 @@ export async function setSimulationSpeed(speed) {
     body: JSON.stringify({ speed: Number(speed) }),
   });
   if (!res.ok) throw new Error("Failed to update simulation speed");
+  return res.json();
+}
+
+export async function getMqttStatus() {
+  const res = await fetch(`${API_BASE}/api/mqtt/status`);
+  if (!res.ok) throw new Error("Failed to fetch MQTT status");
+  return res.json();
+}
+
+export async function getMqttTags() {
+  const res = await fetch(`${API_BASE}/api/mqtt/tags`);
+  if (!res.ok) throw new Error("Failed to fetch MQTT live tags");
   return res.json();
 }

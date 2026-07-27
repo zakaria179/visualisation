@@ -1,18 +1,26 @@
 import React from "react";
-
-const STATE_CONFIG = {
-  RUNNING: { label: "RUNNING", icon: "▶", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)", border: "#10b981" },
-  PAUSED: { label: "PAUSED", icon: "⏸", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b" },
-  STOPPED: { label: "STOPPED", icon: "⏹", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.15)", border: "#64748b" },
-  FINISHED: { label: "FINISHED", icon: "✔", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.15)", border: "#3b82f6" },
-  ERROR: { label: "ERROR", icon: "⚠", color: "#ef4444", bg: "rgba(239, 68, 68, 0.15)", border: "#ef4444" },
-};
+import { Play, Pause, Square, CheckCircle2, AlertTriangle } from "lucide-react";
 
 /**
- * Status badge displaying color-coded simulation state indicator.
+ * Status badge displaying color-coded simulation state indicator with Lucide icons.
  */
 export default function SimulationStatusBadge({ state }) {
-  const config = STATE_CONFIG[state] || STATE_CONFIG.STOPPED;
+  const isRunning = state === "RUNNING";
+  const isPaused = state === "PAUSED";
+  const isFinished = state === "FINISHED";
+  const isError = state === "ERROR";
+
+  const config = isRunning
+    ? { label: "RUNNING", Icon: Play, color: "#10b981", bg: "rgba(16, 185, 129, 0.15)", border: "#10b981" }
+    : isPaused
+    ? { label: "PAUSED", Icon: Pause, color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b" }
+    : isFinished
+    ? { label: "FINISHED", Icon: CheckCircle2, color: "#3b82f6", bg: "rgba(59, 130, 246, 0.15)", border: "#3b82f6" }
+    : isError
+    ? { label: "ERROR", Icon: AlertTriangle, color: "#ef4444", bg: "rgba(239, 68, 68, 0.15)", border: "#ef4444" }
+    : { label: "STOPPED", Icon: Square, color: "#94a3b8", bg: "rgba(148, 163, 184, 0.15)", border: "#64748b" };
+
+  const BadgeIcon = config.Icon;
 
   return (
     <div
@@ -20,7 +28,7 @@ export default function SimulationStatusBadge({ state }) {
         display: "inline-flex",
         alignItems: "center",
         gap: "0.35rem",
-        padding: "0.15rem 0.55rem",
+        padding: "0.2rem 0.65rem",
         borderRadius: "12px",
         backgroundColor: config.bg,
         border: `1px solid ${config.border}`,
@@ -32,7 +40,7 @@ export default function SimulationStatusBadge({ state }) {
         userSelect: "none",
       }}
     >
-      <span>{config.icon}</span>
+      <BadgeIcon size={12} />
       <span>{config.label}</span>
     </div>
   );

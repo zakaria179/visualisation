@@ -1,179 +1,187 @@
-import React from "react";
-import SimulationStatusBadge from "./SimulationStatusBadge";
-import {
-  startSimulation,
-  pauseSimulation,
-  resumeSimulation,
-  stopSimulation,
-  restartSimulation,
-  setSimulationSpeed,
-} from "./simulationApi";
+import React, { useState, useEffect } from "react";
+import SimulationControlModal from "./SimulationControlModal";
+import { getMqttStatus, getMqttTags } from "./simulationApi";
 
 /**
- * Compact Header Simulation Control Bar.
- * Renders playback buttons, state badge, speed dropdown, and progress indicator.
+ * Ultra-Clean Header Control Bar.
+ * Holds only two pop-up launchers:
+ * 1. "🎮 Simulation Controls & Data" -> opens SimulationControlModal pop-up.
+ * 2. "📡 Live Feed" -> opens live MQTT stream drawer.
  */
 export default function SimulationControlBar({ status, onStatusUpdate }) {
-  const state = status?.state || "STOPPED";
-  const currentRecord = status?.current_record || 0;
-  const totalRecords = status?.total_records || 0;
-  const progress = status?.progress || 0;
-  const speed = status?.speed || 1;
-  const simTime = status?.simulation_time || "00:00:00.000";
+  const [mqttStatus, setMqttStatus] = useState(null);
+  const [showMqttDrawer, setShowMqttDrawer] = useState(false);
+  const [showControlModal, setShowControlModal] = useState(false);
+  const [mqttTags, setMqttTags] = useState({});
 
-  // Enable / Disable logic based on simulation state
-  const isRunning = state === "RUNNING";
-  const isPaused = state === "PAUSED";
-  const isStopped = state === "STOPPED";
-  const isFinished = state === "FINISHED";
-  const isError = state === "ERROR";
+  // Poll MQTT status periodically
+  useEffect(() => {
+    const fetchMqtt = async () => {
+      try {
+        const data = await getMqttStatus();
+        setMqttStatus(data);
+      } catch (e) {
+        console.error("MQTT status fetch failed:", e);
+      }
+    };
+    fetchMqtt();
+    const timer = setInterval(fetchMqtt, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const canStart = (isStopped || isFinished) && !isError;
-  const canPause = isRunning && !isError;
-  const canResume = isPaused && !isError;
-  const canStop = (isRunning || isPaused) && !isError;
-  const canRestart = true; // Always enabled to reset error/state
+  // Poll live MQTT tags when drawer is open
+  useEffect(() => {
+    if (!showMqttDrawer) return;
+    const fetchTags = async () => {
+      try {
+        const data = await getMqttTags();
+        setMqttTags(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchTags();
+    const timer = setInterval(fetchTags, 800);
+    return () => clearInterval(timer);
+  }, [showMqttDrawer]);
 
-  const handleAction = async (actionFn) => {
-    try {
-      const updatedStatus = await actionFn();
-      if (onStatusUpdate) onStatusUpdate(updatedStatus);
-    } catch (err) {
-      console.error("Simulation action failed:", err);
-    }
-  };
-
-  const handleSpeedChange = async (e) => {
-    const newSpeed = Number(e.target.value);
-    try {
-      const updatedStatus = await setSimulationSpeed(newSpeed);
-      if (onStatusUpdate) onStatusUpdate(updatedStatus);
-    } catch (err) {
-      console.error("Speed update failed:", err);
-    }
-  };
-
-  const buttonStyle = (enabled) => ({
-    background: enabled ? "#1e293b" : "#0f172a",
-    color: enabled ? "#f8fafc" : "#475569",
-    border: `1px solid ${enabled ? "#334155" : "#1e293b"}`,
-    padding: "0.2rem 0.5rem",
-    borderRadius: "4px",
-    fontSize: "0.75rem",
-    fontWeight: "600",
-    cursor: enabled ? "pointer" : "not-allowed",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "0.25rem",
-    transition: "all 0.2s ease",
-    opacity: enabled ? 1 : 0.4,
-  });
+  const totalTags = mqttStatus?.total_live_tags || status?.mqtt?.total_live_tags || 51;
+  const liveTagCount = Object.keys(mqttTags).length > 0 ? Object.keys(mqttTags).length : totalTags;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "0.85rem",
-        boxSizing: "border-box",
-      }}
-    >
-      {/* State Badge */}
-      <SimulationStatusBadge state={state} />
+    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+      {/* 1. Simulation Controls & Data Pop-up Launcher Button */}
+      <button
+        onClick={() => setShowControlModal(true)}
+        style={{
+          background: "#0284c7",
+          color: "#ffffff",
+          border: "1px solid #00f0ff",
+          borderRadius: "6px",
+          padding: "0.32rem 0.75rem",
+          fontSize: "0.78rem",
+          fontWeight: "700",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.4rem",
+          transition: "all 0.2s ease",
+          boxShadow: "0 0 10px rgba(0, 240, 255, 0.25)",
+        }}
+        title="Click to open Simulation Controller & Live Data Pop-up"
+      >
+        🎮 Simulation Controls & Data
+      </button>
 
-      {/* Progress & Record Count */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.15rem", minWidth: "140px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.72rem", color: "#94a3b8" }}>
-          <span>Record {currentRecord} / {totalRecords}</span>
-          <strong style={{ color: "#00f0ff" }}>{progress.toFixed(1)}%</strong>
-        </div>
-        {/* Thin Progress Bar */}
-        <div style={{ width: "100%", height: "4px", backgroundColor: "#1e293b", borderRadius: "2px", overflow: "hidden" }}>
-          <div
-            style={{
-              width: `${Math.min(100, Math.max(0, progress))}%`,
-              height: "100%",
-              backgroundColor: isFinished ? "#3b82f6" : "#00f0ff",
-              boxShadow: "0 0 6px #00f0ff",
-              transition: "width 0.3s ease",
-            }}
-          />
-        </div>
-      </div>
+      {/* 2. Live Feed MQTT Drawer Button */}
+      <button
+        onClick={() => setShowMqttDrawer(!showMqttDrawer)}
+        style={{
+          background: showMqttDrawer ? "#0284c7" : "#1e293b",
+          color: "#38bdf8",
+          border: "1px solid #0284c7",
+          borderRadius: "6px",
+          padding: "0.32rem 0.75rem",
+          fontSize: "0.78rem",
+          fontWeight: "700",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.4rem",
+          transition: "all 0.2s ease",
+        }}
+        title="Click to open Live MQTT Stream Feed"
+      >
+        📡 Live Feed ({liveTagCount} topics)
+      </button>
 
-      {/* Playback Speed Dropdown */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-        <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Speed:</span>
-        <select
-          value={speed}
-          onChange={handleSpeedChange}
+      {/* Pop-up Simulation Controller & Live Data Modal */}
+      <SimulationControlModal
+        isOpen={showControlModal}
+        onClose={() => setShowControlModal(false)}
+        status={status}
+        onStatusUpdate={onStatusUpdate}
+      />
+
+      {/* Live MQTT Stream Drawer Modal */}
+      {showMqttDrawer && (
+        <div
           style={{
-            background: "#162032",
-            color: "#00f0ff",
-            border: "1px solid #1e293b",
-            borderRadius: "4px",
-            fontSize: "0.75rem",
-            fontWeight: "700",
-            padding: "0.15rem 0.35rem",
-            cursor: "pointer",
-            outline: "none",
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            zIndex: 9999,
+            display: "flex",
+            justifyContent: "flex-end",
           }}
         >
-          <option value={1}>1×</option>
-          <option value={2}>2×</option>
-          <option value={5}>5×</option>
-          <option value={10}>10×</option>
-          <option value={100}>100×</option>
-        </select>
-      </div>
+          <div
+            onClick={() => setShowMqttDrawer(false)}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              background: "rgba(0, 0, 0, 0.5)",
+              backdropFilter: "blur(2px)",
+              cursor: "pointer",
+            }}
+          />
 
-      {/* Control Buttons Group */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
-        <button
-          disabled={!canStart}
-          onClick={() => handleAction(startSimulation)}
-          style={buttonStyle(canStart)}
-          title="Start simulation from record 1"
-        >
-          ▶ Start
-        </button>
+          <div
+            style={{
+              position: "relative",
+              width: "420px",
+              height: "100%",
+              background: "#0f172a",
+              borderLeft: "1px solid #1e293b",
+              boxShadow: "-5px 0 25px rgba(0,0,0,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              padding: "1rem",
+              boxSizing: "border-box",
+              zIndex: 10000,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", borderBottom: "1px solid #1e293b", paddingBottom: "0.5rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <span style={{ fontSize: "1.2rem" }}>📡</span>
+                <span style={{ color: "#00f0ff", fontWeight: "700", fontSize: "0.9rem" }}>
+                  MQTT Broker Live Feed
+                </span>
+              </div>
+              <button
+                onClick={() => setShowMqttDrawer(false)}
+                style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
 
-        <button
-          disabled={!canPause}
-          onClick={() => handleAction(pauseSimulation)}
-          style={buttonStyle(canPause)}
-          title="Pause current simulation record"
-        >
-          ⏸ Pause
-        </button>
-
-        <button
-          disabled={!canResume}
-          onClick={() => handleAction(resumeSimulation)}
-          style={buttonStyle(canResume)}
-          title="Resume simulation playback"
-        >
-          ▶ Resume
-        </button>
-
-        <button
-          disabled={!canStop}
-          onClick={() => handleAction(stopSimulation)}
-          style={buttonStyle(canStop)}
-          title="Stop simulation and reset pointer"
-        >
-          ⏹ Stop
-        </button>
-
-        <button
-          disabled={!canRestart}
-          onClick={() => handleAction(restartSimulation)}
-          style={buttonStyle(canRestart)}
-          title="Restart simulation immediately"
-        >
-          ↺ Restart
-        </button>
-      </div>
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {Object.keys(mqttTags).length === 0 ? (
+                <div style={{ color: "#64748b", textAlign: "center", padding: "2rem 0", fontSize: "0.8rem" }}>
+                  Waiting for active MQTT topic payloads...
+                </div>
+              ) : (
+                Object.entries(mqttTags).map(([topic, payload]) => (
+                  <div key={topic} style={{ background: "#162032", border: "1px solid #1e293b", borderRadius: "6px", padding: "0.6rem", fontSize: "0.72rem" }}>
+                    <div style={{ color: "#38bdf8", fontWeight: "700", fontFamily: "monospace", marginBottom: "0.2rem" }}>
+                      {topic}
+                    </div>
+                    <pre style={{ margin: 0, color: "#a7f3d0", fontFamily: "monospace", fontSize: "0.68rem", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                      {JSON.stringify(payload, null, 2)}
+                    </pre>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
