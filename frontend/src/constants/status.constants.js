@@ -1,0 +1,15 @@
+export const SIMULATION_STATES = {
+  STOPPED: "STOPPED",
+  RUNNING: "RUNNING",
+  PAUSED: "PAUSED",
+  FINISHED: "FINISHED",
+  ERROR: "ERROR",
+};
+
+export const CONDITION_COLORS = {
+  GOOD: "#10B981",
+  WARNING: "#F59E0B",
+  CRITICAL: "#EF4444",
+};
+
+export const DEFAULT_SPEEDS = [1, 10, 60, 100, 600];

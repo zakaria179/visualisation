@@ -1,8 +1,0 @@
-equipment_id,equipment_name,type,manufacturer,model,install_date,rated_capacity,criticality,last_maintenance_date,next_maintenance_due,maintenance_interval_days,running_hours,MTBF_hours,MTTR_hours,last_failure_mode,condition_status
-PB_001,Pump Box,Sump/Mixing Box,Metso,PB-4500,2021-03-14,1800 t/h slurry,Medium,2026-06-20,2026-09-20,90,39480,8200,4,Level probe fouling,Good
-SP_001,Slurry Pump (Centrifugal),Centrifugal Pump,Weir Minerals,Warman AH 8/6,2021-03-14,1300 m3/h @ 45 m head,High,2026-07-23,2026-08-06,14,39480,340,6,Impeller/liner wear,Fair - wear liner due
-BM_001,Ball Mill,Grinding Mill,FLSmidth,Ball Mill 5.5x8.5m,2020-11-02,650 t/h @ 160 micron target,Critical,2026-07-28,2026-08-11,13,45200,312,10,Trunnion bearing overheat,Fair - bearing monitored
-CY_001_A,Hydrocyclone A,Hydrocyclone,Weir Cavex,CVX 500,2022-01-10,325 m3/h,High,2026-07-19,2026-08-18,30,25100,720,2,Apex/spigot wear,Good - liner replaced
-CY_001_B,Hydrocyclone B,Hydrocyclone,Weir Cavex,CVX 500,2022-01-10,325 m3/h,High,2026-07-19,2026-08-18,30,25100,720,2,Apex/spigot wear,Good - liner replaced
-CY_001_C,Hydrocyclone C,Hydrocyclone,Weir Cavex,CVX 500,2022-01-10,325 m3/h,High,2026-07-19,2026-08-18,30,25100,680,2,Choked apex - intermittent offline,Monitor - choke event logged
-CY_001_D,Hydrocyclone D,Hydrocyclone,Weir Cavex,CVX 500,2022-01-10,325 m3/h,High,2026-07-19,2026-08-18,30,25100,720,2,Apex/spigot wear,Good - liner replaced

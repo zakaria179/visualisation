@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Menu, Activity, Cpu, Layers, Zap, Radio, CheckCircle, AlertCircle, Play, Pause, RotateCcw, Square } from "lucide-react";
-import Flowsheet from "./Flowsheet";
-import MaintenancePage from "./MaintenancePage";
-import NavigationSidebar from "./NavigationSidebar";
+import { Menu, Activity, Radio } from "lucide-react";
+import Flowsheet from "./pages/Flowsheet";
+import MaintenancePage from "./pages/MaintenancePage";
+import KnowledgeGraphPage from "./pages/KnowledgeGraphPage";
+import NavigationSidebar from "./components/NavigationSidebar";
 import {
   getSimulationStatus,
   startSimulation,
@@ -11,11 +12,10 @@ import {
   stopSimulation,
   restartSimulation,
   setSimulationSpeed,
-} from "./simulationApi";
+} from "./api/simulationApi";
+import { API_BASE as API } from "./config/api.config";
+import "./styles/App.css";
 
-const API = "http://localhost:8000";
-
-// Dictionary mapping long backend CSV column keys to clean, short UI display labels
 const DISPLAY_METRIC_NAMES = {
   "Feed Solid Flow": "Flow (t/h)",
   "Feed BPL": "Grade (% BPL)",
@@ -147,7 +147,6 @@ function MetricCard({ label, value, unit }) {
         </span>
       </div>
 
-      {/* Mini Visual Gauge / Meter Bar */}
       <div style={{ width: "100%", height: "4px", backgroundColor: "#1e293b", borderRadius: "2px", overflow: "hidden", marginTop: "0.35rem" }}>
         <div
           style={{
@@ -164,8 +163,29 @@ function MetricCard({ label, value, unit }) {
   );
 }
 
+const VALID_TABS = ["flowsheet", "maintenance", "knowledge-graph", "graph"];
+
+const getInitialTab = () => {
+  const hash = window.location.hash.replace("#", "");
+  if (hash && VALID_TABS.includes(hash)) {
+    return hash;
+  }
+  const saved = localStorage.getItem("activeTab");
+  if (saved && VALID_TABS.includes(saved)) {
+    return saved;
+  }
+  return "flowsheet";
+};
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState("flowsheet");
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  useEffect(() => {
+    localStorage.setItem("activeTab", activeTab);
+    if (window.location.hash !== `#${activeTab}`) {
+      window.location.hash = activeTab;
+    }
+  }, [activeTab]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [asset, setAsset] = useState(null);
   const [selectedTag, setSelectedTag] = useState(null);
@@ -239,7 +259,6 @@ export default function App() {
     }
   };
 
-  // Continuous background polling for simulation status and live MQTT telemetry
   useEffect(() => {
     const fetchStatusAndTelemetry = async () => {
       try {
@@ -287,7 +306,6 @@ export default function App() {
         boxSizing: "border-box",
       }}
     >
-      {/* Navigation Sidebar Drawer */}
       <NavigationSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -296,7 +314,6 @@ export default function App() {
         setActiveTab={setActiveTab}
       />
 
-      {/* Top Clean SCADA Header Bar */}
       <header
         style={{
           height: "52px",
@@ -305,13 +322,12 @@ export default function App() {
           borderBottom: "1px solid #1e293b",
           padding: "0 1.25rem",
           display: "flex",
-          justify: "space-between",
+          justifyContent: "space-between",
           alignItems: "center",
           boxSizing: "border-box",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
-          {/* Hamburger Menu Toggle Button */}
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             style={{
@@ -331,17 +347,15 @@ export default function App() {
             <Menu size={19} />
           </button>
 
-          {/* Project Title */}
           <h1 style={{ margin: 0, fontSize: "0.95rem", fontWeight: "800", letterSpacing: "0.6px" }}>
             <span style={{ color: "#00f0ff", fontWeight: "900" }}>NEXUS</span> DIGITAL TWIN{" "}
             <span style={{ color: "#475569", fontWeight: "300", margin: "0 0.4rem" }}>|</span>{" "}
             <span style={{ color: "#38bdf8", fontWeight: "400", fontSize: "0.82rem" }}>
-              {activeTab === "flowsheet" ? "Process Flowsheet & Control View" : "Maintenance Circuit & Reliability View"}
+              {activeTab === "flowsheet" ? "Process Flowsheet & Control View" : activeTab === "maintenance" ? "Maintenance Circuit & Reliability View" : "Knowledge Graph & Topology View"}
             </span>
           </h1>
         </div>
 
-        {/* Minimal System Online Indicator Badge */}
         <div
           style={{
             display: "flex",
@@ -363,7 +377,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Viewport */}
       {activeTab === "flowsheet" ? (
         <main
           style={{
@@ -379,7 +392,6 @@ export default function App() {
             position: "relative",
           }}
         >
-          {/* Left Panel: Scaled Interactive Process Flow Diagram */}
           <section style={{ height: "100%", width: "100%", minWidth: 0, minHeight: 0, overflow: "hidden", position: "relative" }}>
             <Flowsheet 
               onSelect={loadAsset} 
@@ -401,7 +413,6 @@ export default function App() {
             />
           </section>
 
-          {/* Right Panel: Adaptive Telemetry & MQTT Inspection Panel */}
           <aside
             style={{
               height: "100%",
@@ -457,7 +468,6 @@ export default function App() {
 
             {displayAsset ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%" }}>
-                {/* Asset Header Banner */}
                 <div
                   style={{
                     background: "#162032",
@@ -473,7 +483,6 @@ export default function App() {
                   <div style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: "500" }}>{displayAsset.asset_type}</div>
                 </div>
 
-                {/* Stacked Metadata Cards */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
                   <div style={{ background: "#162032", border: "1px solid #1e293b", padding: "0.5rem 0.65rem", borderRadius: "5px" }}>
                     <div style={{ color: "#94a3b8", fontSize: "0.72rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
@@ -503,7 +512,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Dynamic Telemetry Metric Cards */}
                 <div>
                   <h3 style={{ fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "700" }}>
                     {hasLiveMetrics ? "LIVE METRICS" : "STREAM TELEMETRY"}
@@ -582,7 +590,7 @@ export default function App() {
             )}
           </aside>
         </main>
-      ) : (
+      ) : activeTab === "maintenance" ? (
         <main
           style={{
             flex: 1,
@@ -593,6 +601,18 @@ export default function App() {
           }}
         >
           <MaintenancePage />
+        </main>
+      ) : (
+        <main
+          style={{
+            flex: 1,
+            height: "calc(100vh - 52px)",
+            maxHeight: "calc(100vh - 52px)",
+            overflowY: "auto",
+            boxSizing: "border-box",
+          }}
+        >
+          <KnowledgeGraphPage />
         </main>
       )}
     </div>
