@@ -41,6 +41,7 @@ class CypherGraphRepository:
 
         try:
             with self.driver.session() as session:
+                session.run("MATCH (n) DETACH DELETE n")
                 for node in nodes:
                     label = node.get("type", "Entity")
                     cypher = f"""

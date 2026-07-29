@@ -202,14 +202,14 @@ function getSinglePipeArrow(tag, points) {
 /**
  * Flowsheet Pipe Component with Sequential Step-by-Step Flow Animation
  */
-const PipeLine = ({ tag, points, color, isRunning, isStepActive }) => {
+const PipeLine = ({ tag, points, color, isRunning, isStepActive, selected, onSelect }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const isSelected = false;
+  const isSelected = selected === tag;
   const pipeColor = color || "#38bdf8";
 
   const pathD = buildRoundedPath(points, 12);
   const arrow = getSinglePipeArrow(tag, points);
-  const active = isHovered || (isRunning && isStepActive);
+  const active = isHovered || (isRunning && isStepActive) || isSelected;
 
   return (
     <g
@@ -218,21 +218,22 @@ const PipeLine = ({ tag, points, color, isRunning, isStepActive }) => {
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
         e.stopPropagation();
+        if (onSelect) onSelect(tag);
       }}
-      style={{ cursor: "default" }}
+      style={{ cursor: "pointer" }}
     >
-      <path d={pathD} fill="none" stroke="transparent" strokeWidth="22" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={pathD} fill="none" stroke="transparent" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round" />
 
       {active && (
         <path
           d={pathD}
           fill="none"
           stroke={pipeColor}
-          strokeWidth={(isRunning && isStepActive) ? "10" : "7"}
-          strokeOpacity={(isRunning && isStepActive) ? "0.65" : "0.4"}
+          strokeWidth={isSelected ? "8" : (isRunning && isStepActive) ? "7" : "6"}
+          strokeOpacity={isSelected ? "0.55" : (isRunning && isStepActive) ? "0.45" : "0.3"}
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ filter: `drop-shadow(0 0 14px ${pipeColor}) drop-shadow(0 0 5px #00f0ff)` }}
+          style={{ filter: `drop-shadow(0 0 10px ${pipeColor})` }}
         />
       )}
 
@@ -240,7 +241,7 @@ const PipeLine = ({ tag, points, color, isRunning, isStepActive }) => {
         d={pathD}
         fill="none"
         stroke={pipeColor}
-        strokeWidth={(isRunning && isStepActive) ? 4.5 : isHovered ? 4 : 3.5}
+        strokeWidth={isSelected ? 4.5 : (isRunning && isStepActive) ? 4.0 : isHovered ? 4.0 : 3.5}
         strokeLinecap="round"
         strokeLinejoin="round"
         style={{ transition: "stroke 0.25s, stroke-width 0.25s" }}
@@ -280,9 +281,9 @@ const PipeLine = ({ tag, points, color, isRunning, isStepActive }) => {
 /**
  * Pipe Tag Badge Component
  */
-const PipeLabel = ({ tag, labelPos, color }) => {
+const PipeLabel = ({ tag, labelPos, color, selected, onSelect }) => {
   if (!labelPos) return null;
-  const isSelected = false;
+  const isSelected = selected === tag;
   const badgeColor = color || "#38bdf8";
 
   return (
@@ -290,8 +291,9 @@ const PipeLabel = ({ tag, labelPos, color }) => {
       transform={`translate(${labelPos.x}, ${labelPos.y})`}
       onClick={(e) => {
         e.stopPropagation();
+        if (onSelect) onSelect(tag);
       }}
-      style={{ cursor: "default" }}
+      style={{ cursor: "pointer" }}
     >
       <rect
         x="-25"
@@ -299,18 +301,19 @@ const PipeLabel = ({ tag, labelPos, color }) => {
         width="50"
         height="20"
         rx="4"
-        fill={CARD_BG}
+        fill={isSelected ? "#1e293b" : CARD_BG}
         stroke={badgeColor}
-        strokeWidth="1.5"
+        strokeWidth={isSelected ? "2" : "1.5"}
         style={{
           transition: "all 0.25s ease",
+          filter: isSelected ? `drop-shadow(0 0 10px ${badgeColor})` : "none",
         }}
       />
       <text
         x="0"
         y="3.5"
         textAnchor="middle"
-        fill={TEXT_PRIMARY}
+        fill={isSelected ? badgeColor : TEXT_PRIMARY}
         fontSize="11"
         fontWeight="800"
         fontFamily="Inter, system-ui, sans-serif"
@@ -658,8 +661,8 @@ const BallMill = ({ tag, x, y, selected, onSelect, isRunning, isStepActive }) =>
 /**
  * Stream Node Component: Feed Inputs & Outputs
  */
-const StreamNode = ({ label, tag, x, y, color, type = "input" }) => {
-  const isSelected = false;
+const StreamNode = ({ label, tag, x, y, color, type = "input", selected, onSelect }) => {
+  const isSelected = selected === tag;
   const nodeColor = color || (tag === "P_101" ? "#3b82f6" : tag === "P_006" ? "#10b981" : "#06b6d4");
 
   return (
@@ -667,19 +670,28 @@ const StreamNode = ({ label, tag, x, y, color, type = "input" }) => {
       transform={`translate(${x}, ${y})`}
       onClick={(e) => {
         e.stopPropagation();
+        if (onSelect) onSelect(tag);
       }}
-      style={{ cursor: "default" }}
+      style={{ cursor: "pointer" }}
     >
-      <g style={{ filter: "none", transition: "all 0.25s" }}>
+      <g
+        style={{
+          filter: isSelected
+            ? `drop-shadow(0 0 16px ${nodeColor}) drop-shadow(0 0 6px ${nodeColor})`
+            : `drop-shadow(0 0 10px ${nodeColor})`,
+          transition: "all 0.25s ease",
+        }}
+      >
+        {/* Circumference lit with stream's own color; interior fill remains dark/unlit */}
         <rect
-          x="-48"
+          x="-57"
           y="-15"
-          width="96"
+          width="114"
           height="30"
           rx="6"
-          fill={CARD_BG}
+          fill="#0f172a"
           stroke={nodeColor}
-          strokeWidth="1.5"
+          strokeWidth={isSelected ? "2.5" : "2.0"}
           style={{ transition: "all 0.25s ease" }}
         />
 
@@ -687,7 +699,7 @@ const StreamNode = ({ label, tag, x, y, color, type = "input" }) => {
           x="0"
           y="4"
           textAnchor="middle"
-          fill={TEXT_PRIMARY}
+          fill={nodeColor}
           fontSize="11"
           fontWeight="800"
           fontFamily="Inter, system-ui, sans-serif"
@@ -1196,18 +1208,28 @@ export default function Flowsheet({
 /**
  * Visual High-Tech Stream Classifier Badge for Hydrocyclone OVERFLOW & UNDERFLOW streams.
  */
-function StreamClassifierBadge({ label, tag, x, y, accentColor, glowColor }) {
-  const isSelected = false;
+function StreamClassifierBadge({ label, tag, x, y, accentColor, glowColor, selected, onSelect }) {
+  const isSelected = selected === tag;
+  const badgeColor = accentColor || "#10b981";
 
   return (
     <g
       transform={`translate(${x}, ${y})`}
       onClick={(e) => {
         e.stopPropagation();
+        if (onSelect) onSelect(tag);
       }}
-      style={{ cursor: "default" }}
+      style={{ cursor: "pointer" }}
     >
-      <g style={{ filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.6))" }}>
+      <g
+        style={{
+          filter: isSelected
+            ? `drop-shadow(0 0 16px ${badgeColor}) drop-shadow(0 0 6px ${badgeColor})`
+            : `drop-shadow(0 0 10px ${badgeColor})`,
+          transition: "all 0.25s ease",
+        }}
+      >
+        {/* Circumference lit with stream accent color; interior fill remains dark/unlit */}
         <rect
           x="-52"
           y="-13"
@@ -1215,22 +1237,22 @@ function StreamClassifierBadge({ label, tag, x, y, accentColor, glowColor }) {
           height="26"
           rx="6"
           fill="#0f172a"
-          stroke={accentColor}
-          strokeWidth="1.6"
+          stroke={badgeColor}
+          strokeWidth={isSelected ? "2.5" : "2.0"}
           style={{ transition: "all 0.25s ease" }}
         />
         <circle
           cx="-40"
           cy="0"
           r="3"
-          fill={accentColor}
+          fill={badgeColor}
           style={{ transition: "all 0.25s ease" }}
         />
         <text
           x="4"
           y="3.5"
           textAnchor="middle"
-          fill={accentColor}
+          fill={badgeColor}
           fontSize="10"
           fontWeight="900"
           letterSpacing="0.8px"

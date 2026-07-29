@@ -21,5 +21,13 @@ class TestSimulationManager(unittest.TestCase):
         self.manager.stop()
         self.assertEqual(self.manager.state, SimulationState.STOPPED)
 
+class TestMQTTPublisher(unittest.TestCase):
+    def test_publisher_defaults_to_paused(self):
+        from app.domains.simulation.publisher import MQTTPublisher
+        publisher = MQTTPublisher()
+        self.assertTrue(publisher.paused, "MQTTPublisher must start in paused state until Play is triggered")
+
+
 if __name__ == "__main__":
     unittest.main()
+

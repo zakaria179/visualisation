@@ -17,7 +17,6 @@
     "source": "PW Basin",
     "destination": "Pump Box (PB_001)",
     "csv_columns": [
-      "P101_Water_Flow_tph",
       "Process Water Solid Flow",
       "Process Water Solid Fraction"
     ]
@@ -29,7 +28,6 @@
     "destination": "P_002",
     "csv_columns": [
       "PB001_Level_pct",
-      "PB001_Level_Setpoint_pct",
       "PB001_Sump_Temp_C"
     ]
   },
@@ -38,7 +36,12 @@
     "material": "Mixed Slurry",
     "source": "Pump Box (PB_001)",
     "destination": "Centrifugal Pump (SP_001)",
-    "csv_columns": []
+    "csv_columns": [
+      "Cyclone Feed Solid Flow",
+      "Feed BPL",
+      "Feed P80",
+      "Feed Solid Fraction"
+    ]
   },
   "SP_001": {
     "asset_type": "Equipment / Centrifugal Pump",
@@ -63,9 +66,7 @@
       "Cyclone Feed Solid Flow",
       "Cyclone Feed BPL",
       "Cyclone Feed P80",
-      "Cyclone Feed Solid Fraction",
-      "P003_Slurry_Flow_tph",
-      "P003_Water_Flow_tph"
+      "Cyclone Feed Solid Fraction"
     ]
   },
   "CY_001": {
@@ -89,9 +90,7 @@
       "Cyclone Underflow Solid Flow",
       "Cyclone Underflow BPL",
       "Cyclone Underflow P80",
-      "Cyclone Underflow Solid Fraction",
-      "P004_Slurry_Flow_tph",
-      "P004_Water_Flow_tph"
+      "Cyclone Underflow Solid Fraction"
     ]
   },
   "BM_001": {
@@ -130,9 +129,7 @@
       "Output Slurry Solid Flow",
       "Output Slurry BPL",
       "Output Slurry P80",
-      "Output Slurry Solid Fraction",
-      "P006_Slurry_Flow_tph",
-      "P006_Water_Flow_tph"
+      "Output Slurry Solid Fraction"
     ]
   },
   "System_Global": {

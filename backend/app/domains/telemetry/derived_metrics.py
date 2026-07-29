@@ -54,32 +54,39 @@ class DerivedMetricsService:
             }
 
         elif tag == "PB_001":
-            total_inflow = 0.0
-            for pipe_metrics in incoming_streams.values():
-                total_inflow += (
-                    float(pipe_metrics.get("Feed Solid Flow", 0.0)) +
-                    float(pipe_metrics.get("Process Water Solid Flow", 0.0)) +
-                    float(pipe_metrics.get("Ball Mill Discharge Solid Flow", 0.0))
-                )
+            p001_metrics = incoming_streams.get("P_001", {})
+            p101_metrics = incoming_streams.get("P_101", {})
+            p005_metrics = incoming_streams.get("P_005", {})
+
+            feed_in = float(p001_metrics.get("Feed Solid Flow", 0.0))
+            water_in = float(p101_metrics.get("Process Water Solid Flow", 0.0))
+            recycle_in = float(p005_metrics.get("Ball Mill Discharge Solid Flow", 0.0))
+
+            total_inflow = feed_in + water_in + recycle_in
 
             p002_metrics = outgoing_streams.get("P_002", {})
-            outflow = float(p002_metrics.get("Pump Suction Flow", total_inflow))
+            outflow = float(p002_metrics.get("Cyclone Feed Solid Flow", float(p002_metrics.get("Feed Solid Flow", total_inflow))))
 
             derived = {
-                "num_incoming_streams": len(incoming_streams),
-                "num_outgoing_streams": len(outgoing_streams),
                 "total_inflow": round(total_inflow, 2),
                 "outflow": round(outflow, 2),
+                "flow_balance": round(total_inflow - outflow, 2),
             }
 
         elif tag == "SP_001":
+            p002_metrics = incoming_streams.get("P_002", {})
             p003_metrics = outgoing_streams.get("P_003", {})
+
+            suction_flow = float(p002_metrics.get("Cyclone Feed Solid Flow", float(p002_metrics.get("Feed Solid Flow", 0.0))))
             discharge_flow = float(p003_metrics.get("Cyclone Feed Solid Flow", 0.0))
 
+            if suction_flow == 0.0:
+                suction_flow = discharge_flow
+
             derived = {
-                "suction_flow": round(discharge_flow, 2),
+                "suction_flow": round(suction_flow, 2),
                 "discharge_flow": round(discharge_flow, 2),
-                "flow_balance": 0.0,
+                "flow_balance": round(discharge_flow - suction_flow, 2),
             }
 
         return derived

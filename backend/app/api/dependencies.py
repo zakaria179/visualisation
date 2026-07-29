@@ -3,6 +3,7 @@ from fastapi import Request
 
 from app.providers.csv_provider import CSVDataProvider
 from app.domains.assets.service import AssetService
+from app.domains.assets.repository import EquipmentRepository, MaintenanceRepository
 from app.domains.telemetry.subscriber import MQTTSubscriberService
 from app.domains.telemetry.service import TelemetryService
 from app.domains.simulation.manager import SimulationManager
@@ -21,7 +22,11 @@ def init_app_services():
     global _csv_provider, _asset_service, _mqtt_service, _telemetry_service, _sim_manager, _kg_service
 
     _csv_provider = CSVDataProvider(settings.DATA_DIR)
-    _asset_service = AssetService(settings.ASSETS_PATH, settings.EQUIPMENT_MASTER_PATH)
+    _asset_service = AssetService(
+        assets_file_path=settings.ASSETS_PATH,
+        equipment_repo=EquipmentRepository(settings.EQUIPMENT_MASTER_PATH),
+        maintenance_repo=MaintenanceRepository(settings.MAINTENANCE_HISTORY_PATH),
+    )
     _kg_service = KnowledgeGraphService(_asset_service, _csv_provider)
     _mqtt_service = MQTTSubscriberService(host=settings.MQTT_BROKER_HOST, port=settings.MQTT_BROKER_PORT)
     _mqtt_service.start()

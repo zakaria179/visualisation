@@ -17,59 +17,105 @@ import { API_BASE as API } from "./config/api.config";
 import "./styles/App.css";
 
 const DISPLAY_METRIC_NAMES = {
-  "Feed Solid Flow": "Flow (t/h)",
-  "Feed BPL": "Grade (% BPL)",
-  "Feed P80": "P80 (µm)",
-  "Feed Solid Fraction": "Solid Frac (%)",
-  "Process Water Solid Flow": "PW Flow (t/h)",
-  "Process Water Solid Fraction": "Solid Frac (%)",
-  "Cyclone Feed Solid Flow": "Flow (t/h)",
-  "Cyclone Feed BPL": "Grade (% BPL)",
-  "Cyclone Feed P80": "P80 (µm)",
-  "Cyclone Feed Solid Fraction": "Solid Frac (%)",
-  "Cyclone Underflow Solid Flow": "Flow (t/h)",
-  "Cyclone Underflow BPL": "Grade (% BPL)",
-  "Cyclone Underflow P80": "P80 (µm)",
-  "Cyclone Underflow Solid Fraction": "Solid Frac (%)",
-  "Ball Mill Discharge Solid Flow": "Flow (t/h)",
-  "Ball Mill Discharge BPL": "Grade (% BPL)",
-  "Ball Mill Discharge P80": "P80 (µm)",
-  "Ball Mill Discharge Solid Fraction": "Solid Frac (%)",
-  "Output Slurry Solid Flow": "Flow (t/h)",
-  "Output Slurry BPL": "Grade (% BPL)",
-  "Output Slurry P80": "P80 (µm)",
-  "Output Slurry Solid Fraction": "Solid Frac (%)",
-  "Ambient_Temp_C": "Ambient Temp (°C)",
-  "PB001_Level_pct": "Sump Level (%)",
-  "PB001_Sump_Temp_C": "Sump Temp (°C)",
-  "SP001_Motor_Current_A": "Current (A)",
-  "SP001_Motor_Power_kW": "Power (kW)",
-  "SP001_Discharge_Pressure_kPa": "Disch Press (kPa)",
-  "SP001_Speed_RPM": "Speed (RPM)",
-  "SP001_Bearing_Temp_C": "Bearing Temp (°C)",
-  "SP001_Vibration_mms": "Vibration (mm/s)",
-  "BM001_Power_Draw_kW": "Power Draw (kW)",
-  "BM001_Motor_Current_A": "Motor Current (A)",
-  "BM001_Mill_Speed_pctCritical": "Speed (% Crit)",
-  "BM001_Bearing_DE_Temp_C": "Drive Bearing (°C)",
-  "BM001_Bearing_NDE_Temp_C": "Non-Drive Bearing (°C)",
-  "BM001_Vibration_mms": "Vibration RMS (mm/s)",
-  "BM001_Sound_Level_dB": "Acoustic (dB)",
-  "CY001_Inlet_Pressure_kPa": "Inlet Press (kPa)",
-  "CY001_Vortex_DP_kPa": "Vortex DP (kPa)",
-  "CY001_Apex_Wear_Index_pct": "Apex Wear (%)",
+  // Raw CSV Telemetry
+  "Feed Solid Flow": "Solid Flow",
+  "Feed BPL": "Grade",
+  "Feed P80": "P80",
+  "Feed Solid Fraction": "Solid Frac",
+  "Process Water Solid Flow": "Solid Flow",
+  "Process Water Solid Fraction": "Solid Frac",
+  "Cyclone Feed Solid Flow": "Solid Flow",
+  "Cyclone Feed BPL": "Grade",
+  "Cyclone Feed P80": "P80",
+  "Cyclone Feed Solid Fraction": "Solid Frac",
+  "Cyclone Underflow Solid Flow": "Solid Flow",
+  "Cyclone Underflow BPL": "Grade",
+  "Cyclone Underflow P80": "P80",
+  "Cyclone Underflow Solid Fraction": "Solid Frac",
+  "Ball Mill Discharge Solid Flow": "Solid Flow",
+  "Ball Mill Discharge BPL": "Grade",
+  "Ball Mill Discharge P80": "P80",
+  "Ball Mill Discharge Solid Fraction": "Solid Frac",
+  "Output Slurry Solid Flow": "Solid Flow",
+  "Output Slurry BPL": "Grade",
+  "Output Slurry P80": "P80",
+  "Output Slurry Solid Fraction": "Solid Frac",
+  "Ambient_Temp_C": "Ambient Temp",
+  "PB001_Level_pct": "Sump Level",
+  "PB001_Sump_Temp_C": "Sump Temp",
+  "SP001_Motor_Current_A": "Current",
+  "SP001_Motor_Power_kW": "Power",
+  "SP001_Discharge_Pressure_kPa": "Disch Press",
+  "SP001_Speed_RPM": "Speed",
+  "SP001_Bearing_Temp_C": "Bearing Temp",
+  "SP001_Vibration_mms": "Vibration",
+  "BM001_Power_Draw_kW": "Power Draw",
+  "BM001_Motor_Current_A": "Motor Current",
+  "BM001_Mill_Speed_pctCritical": "Speed",
+  "BM001_Bearing_DE_Temp_C": "Drive Bearing",
+  "BM001_Bearing_NDE_Temp_C": "Non-Drive Bearing",
+  "BM001_Vibration_mms": "Vibration RMS",
+  "BM001_Sound_Level_dB": "Acoustic",
+  "CY001_Inlet_Pressure_kPa": "Inlet Press",
+  "CY001_Vortex_DP_kPa": "Vortex DP",
+  "CY001_Apex_Wear_Index_pct": "Apex Wear",
   "CY001_Cyclones_Online": "Cyclones Online",
-  "Circulating_Load_Ratio_pct": "Circulating Load (%)",
+  "Circulating_Load_Ratio_pct": "Circulating Load",
   "Mill_Reduction_Ratio": "Reduction Ratio",
+
+  // Derived Engineering Metrics
+  "delta_p80": "Size Reduction",
+  "input_flow": "Input Flow",
+  "output_flow": "Output Flow",
+  "flow_difference": "Flow Variance",
+  "feed_flow": "Feed Flow",
+  "underflow_flow": "Underflow Flow",
+  "overflow_flow": "Overflow Flow",
+  "underflow_pct": "Underflow Ratio",
+  "overflow_pct": "Overflow Ratio",
+  "total_inflow": "Total Inflow",
+  "outflow": "Outflow",
+  "flow_balance": "Flow Balance",
+  "suction_flow": "Suction Flow",
+  "discharge_flow": "Discharge Flow",
 };
 
 function getDisplayMetricName(key) {
+  if (!key) return "";
   if (DISPLAY_METRIC_NAMES[key]) return DISPLAY_METRIC_NAMES[key];
-  if (key.includes("Solid Flow")) return "Flow (t/h)";
-  if (key.includes("Solid Fraction")) return "Solid Frac (%)";
-  if (key.includes("BPL")) return "Grade (% BPL)";
-  if (key.includes("P80")) return "P80 (µm)";
-  return key;
+
+  let cleanName = String(key);
+  if (cleanName.includes("Solid Flow")) return "Flow";
+  if (cleanName.includes("Solid Fraction")) return "Solid Frac";
+  if (cleanName.includes("BPL")) return "Grade";
+  if (cleanName.includes("P80")) return "P80";
+
+  return cleanName
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\s*\([^)]*\)/g, "")
+    .trim();
+}
+
+function getMetricUnit(key) {
+  if (!key) return "";
+  const k = String(key).toLowerCase();
+
+  if (k.includes("p80") || k.includes("delta_p80")) return "µm";
+  if (k.includes("bpl")) return "% BPL";
+  if (k.includes("pct") || k.includes("fraction") || k.includes("level") || k.includes("wear") || k.includes("_pct")) return "%";
+  if (k.includes("flow") || k.includes("inflow") || k.includes("outflow")) return "t/h";
+  if (k.includes("temp")) return "°C";
+  if (k.includes("pressure") || k.includes("kpa") || k.includes("vortex_dp")) return "kPa";
+  if (k.includes("kw") || k.includes("power")) return "kW";
+  if (k.includes("current") || k.endsWith("_a")) return "A";
+  if (k.includes("rpm") || k.includes("speed")) return "RPM";
+  if (k.includes("vibration") || k.includes("mms")) return "mm/s";
+  if (k.includes("sound") || k.includes("db")) return "dB";
+  if (k.includes("online") || k.includes("num_")) return "units";
+
+  return "";
 }
 
 function renderSourceDestValue(val) {
@@ -102,6 +148,7 @@ function MetricCard({ label, value, unit }) {
   const numVal = typeof value === "number" ? value : parseFloat(value);
   const isValidNum = !isNaN(numVal);
   const displayStr = isValidNum ? numVal.toFixed(2) : (value || "0.00");
+  const metricUnit = unit || getMetricUnit(label);
 
   let color = "#00f0ff";
   let percent = 50;
@@ -110,7 +157,7 @@ function MetricCard({ label, value, unit }) {
     if (isValidNum && numVal > 65) color = "#ef4444";
     else if (isValidNum && numVal > 45) color = "#f59e0b";
     percent = isValidNum ? Math.min(100, Math.max(15, (numVal / 100) * 100)) : 50;
-  } else if (label.includes("Level") || label.includes("Solid Frac") || label.includes("Wear")) {
+  } else if (label.includes("Level") || label.includes("Solid Frac") || label.includes("Wear") || label.includes("%")) {
     percent = isValidNum ? Math.min(100, Math.max(5, numVal)) : 50;
   } else if (label.includes("Flow")) {
     percent = isValidNum ? Math.min(100, Math.max(10, (numVal / 1500) * 100)) : 40;
@@ -127,24 +174,28 @@ function MetricCard({ label, value, unit }) {
         padding: "0.6rem 0.75rem",
         display: "flex",
         flexDirection: "column",
-        justify: "space-between",
-        minHeight: "76px",
+        justifyContent: "space-between",
+        minHeight: "80px",
         boxSizing: "border-box",
         transition: "all 0.3s ease",
         position: "relative",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.25rem" }}>
         <span style={{ color: "#94a3b8", fontSize: "11px", fontWeight: "600", lineHeight: "1.2" }} title={label}>
           {label}
         </span>
-        {unit && <span style={{ color: "#64748b", fontSize: "10px", fontWeight: "700" }}>{unit}</span>}
       </div>
 
-      <div style={{ display: "flex", alignItems: "baseline", marginTop: "0.25rem" }}>
-        <span style={{ color: color, fontFamily: "'JetBrains Mono', monospace", fontSize: "1.3rem", fontWeight: "800", lineHeight: "1.1", transition: "color 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "baseline", marginTop: "0.25rem", gap: "0.3rem" }}>
+        <span style={{ color: color, fontFamily: "'JetBrains Mono', monospace", fontSize: "1.25rem", fontWeight: "800", lineHeight: "1.1", transition: "color 0.3s ease" }}>
           {displayStr}
         </span>
+        {metricUnit && (
+          <span style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: "700", fontFamily: "sans-serif" }}>
+            {metricUnit}
+          </span>
+        )}
       </div>
 
       <div style={{ width: "100%", height: "4px", backgroundColor: "#1e293b", borderRadius: "2px", overflow: "hidden", marginTop: "0.35rem" }}>
@@ -520,7 +571,7 @@ export default function App() {
                   {hasLiveMetrics && (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "0.4rem", width: "100%" }}>
                       {Object.entries(displayAsset.live_metrics).map(([key, val]) => (
-                        <MetricCard key={key} label={getDisplayMetricName(key)} value={val} />
+                        <MetricCard key={key} label={getDisplayMetricName(key)} value={val} unit={getMetricUnit(key)} />
                       ))}
                     </div>
                   )}
@@ -532,7 +583,7 @@ export default function App() {
                       </h4>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "0.4rem" }}>
                         {Object.entries(displayAsset.derived_metrics).map(([key, val]) => (
-                          <MetricCard key={key} label={getDisplayMetricName(key)} value={val} />
+                          <MetricCard key={key} label={getDisplayMetricName(key)} value={val} unit={getMetricUnit(key)} />
                         ))}
                       </div>
                     </div>
@@ -552,7 +603,7 @@ export default function App() {
                               </div>
                               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.35rem" }}>
                                 {Object.entries(metricsDict).map(([colKey, val]) => (
-                                  <MetricCard key={colKey} label={getDisplayMetricName(colKey)} value={val} />
+                                  <MetricCard key={colKey} label={getDisplayMetricName(colKey)} value={val} unit={getMetricUnit(colKey)} />
                                 ))}
                               </div>
                             </div>
@@ -572,7 +623,7 @@ export default function App() {
                               </div>
                               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.35rem" }}>
                                 {Object.entries(metricsDict).map(([colKey, val]) => (
-                                  <MetricCard key={colKey} label={getDisplayMetricName(colKey)} value={val} />
+                                  <MetricCard key={colKey} label={getDisplayMetricName(colKey)} value={val} unit={getMetricUnit(colKey)} />
                                 ))}
                               </div>
                             </div>

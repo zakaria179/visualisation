@@ -36,6 +36,7 @@ class MQTTPublisher:
         process_csv_path: Optional[str | Path] = None,
         health_csv_path: Optional[str | Path] = None,
         loop: bool = True,
+        start_paused: bool = True,
     ):
         self.broker_host = broker_host or settings.MQTT_BROKER_HOST
         self.broker_port = broker_port or settings.MQTT_BROKER_PORT
@@ -49,9 +50,10 @@ class MQTTPublisher:
         self.tag_registry: Dict[str, Dict[str, Any]] = {}
         self.client: Optional[mqtt.Client] = None
         self.stop_event = threading.Event()
-        self.paused = False
+        self.paused = start_paused
         self.reset_stream = False
         self.control_topic = "plant/simulation/control"
+
 
     def load_registry(self):
         """Load mapping of source_column -> tag info from tag_mapping_registry.csv"""
@@ -297,6 +299,11 @@ def main():
         action="store_true",
         help="Disable continuous looping and stop after replaying datasets once",
     )
+    parser.add_argument(
+        "--unpaused",
+        action="store_true",
+        help="Start publishing data immediately upon launch without waiting for Play signal",
+    )
 
     args = parser.parse_args()
 
@@ -308,8 +315,10 @@ def main():
         process_csv_path=args.process_csv,
         health_csv_path=args.health_csv,
         loop=not args.no_loop,
+        start_paused=not args.unpaused,
     )
     publisher.start()
+
 
 
 if __name__ == "__main__":

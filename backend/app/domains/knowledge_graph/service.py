@@ -38,6 +38,7 @@ class KnowledgeGraphService:
         self._memory_node_map = node_map
 
     def get_topology(self) -> Dict[str, Any]:
+        self.rebuild_memory_graph()
         cypher_topo = self.repository.fetch_topology()
         if cypher_topo:
             return cypher_topo

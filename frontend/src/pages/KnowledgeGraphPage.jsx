@@ -27,12 +27,114 @@ import {
 
 import { API_BASE as API } from "../config/api.config.js";
 
+const DISPLAY_METRIC_NAMES = {
+  // Raw CSV Telemetry
+  "Feed Solid Flow": "Solid Flow",
+  "Feed BPL": "Grade",
+  "Feed P80": "P80",
+  "Feed Solid Fraction": "Solid Frac",
+  "Process Water Solid Flow": "Solid Flow",
+  "Process Water Solid Fraction": "Solid Frac",
+  "Cyclone Feed Solid Flow": "Solid Flow",
+  "Cyclone Feed BPL": "Grade",
+  "Cyclone Feed P80": "P80",
+  "Cyclone Feed Solid Fraction": "Solid Frac",
+  "Cyclone Underflow Solid Flow": "Solid Flow",
+  "Cyclone Underflow BPL": "Grade",
+  "Cyclone Underflow P80": "P80",
+  "Cyclone Underflow Solid Fraction": "Solid Frac",
+  "Ball Mill Discharge Solid Flow": "Solid Flow",
+  "Ball Mill Discharge BPL": "Grade",
+  "Ball Mill Discharge P80": "P80",
+  "Ball Mill Discharge Solid Fraction": "Solid Frac",
+  "Output Slurry Solid Flow": "Solid Flow",
+  "Output Slurry BPL": "Grade",
+  "Output Slurry P80": "P80",
+  "Output Slurry Solid Fraction": "Solid Frac",
+  "Ambient_Temp_C": "Ambient Temp",
+  "PB001_Level_pct": "Sump Level",
+  "PB001_Sump_Temp_C": "Sump Temp",
+  "SP001_Motor_Current_A": "Current",
+  "SP001_Motor_Power_kW": "Power",
+  "SP001_Discharge_Pressure_kPa": "Disch Press",
+  "SP001_Speed_RPM": "Speed",
+  "SP001_Bearing_Temp_C": "Bearing Temp",
+  "SP001_Vibration_mms": "Vibration",
+  "BM001_Power_Draw_kW": "Power Draw",
+  "BM001_Motor_Current_A": "Motor Current",
+  "BM001_Mill_Speed_pctCritical": "Speed",
+  "BM001_Bearing_DE_Temp_C": "Drive Bearing",
+  "BM001_Bearing_NDE_Temp_C": "Non-Drive Bearing",
+  "BM001_Vibration_mms": "Vibration RMS",
+  "BM001_Sound_Level_dB": "Acoustic",
+  "CY001_Inlet_Pressure_kPa": "Inlet Press",
+  "CY001_Vortex_DP_kPa": "Vortex DP",
+  "CY001_Apex_Wear_Index_pct": "Apex Wear",
+  "CY001_Cyclones_Online": "Cyclones Online",
+  "Circulating_Load_Ratio_pct": "Circulating Load",
+  "Mill_Reduction_Ratio": "Reduction Ratio",
+
+  // Derived Engineering Metrics
+  "delta_p80": "Size Reduction",
+  "input_flow": "Input Flow",
+  "output_flow": "Output Flow",
+  "flow_difference": "Flow Variance",
+  "feed_flow": "Feed Flow",
+  "underflow_flow": "Underflow Flow",
+  "overflow_flow": "Overflow Flow",
+  "underflow_pct": "Underflow Ratio",
+  "overflow_pct": "Overflow Ratio",
+  "total_inflow": "Total Inflow",
+  "outflow": "Outflow",
+  "flow_balance": "Flow Balance",
+  "suction_flow": "Suction Flow",
+  "discharge_flow": "Discharge Flow",
+};
+
+function getDisplayMetricName(key) {
+  if (!key) return "";
+  if (DISPLAY_METRIC_NAMES[key]) return DISPLAY_METRIC_NAMES[key];
+
+  let cleanName = String(key);
+  if (cleanName.includes("Solid Flow")) return "Flow";
+  if (cleanName.includes("Solid Fraction")) return "Solid Frac";
+  if (cleanName.includes("BPL")) return "Grade";
+  if (cleanName.includes("P80")) return "P80";
+
+  return cleanName
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\s*\([^)]*\)/g, "")
+    .trim();
+}
+
+function getMetricUnit(key) {
+  if (!key) return "";
+  const k = String(key).toLowerCase();
+
+  if (k.includes("p80") || k.includes("delta_p80")) return "µm";
+  if (k.includes("bpl")) return "% BPL";
+  if (k.includes("pct") || k.includes("fraction") || k.includes("level") || k.includes("wear") || k.includes("_pct")) return "%";
+  if (k.includes("flow") || k.includes("inflow") || k.includes("outflow")) return "t/h";
+  if (k.includes("temp")) return "°C";
+  if (k.includes("pressure") || k.includes("kpa") || k.includes("vortex_dp")) return "kPa";
+  if (k.includes("kw") || k.includes("power")) return "kW";
+  if (k.includes("current") || k.endsWith("_a")) return "A";
+  if (k.includes("rpm") || k.includes("speed")) return "RPM";
+  if (k.includes("vibration") || k.includes("mms")) return "mm/s";
+  if (k.includes("sound") || k.includes("db")) return "dB";
+  if (k.includes("online") || k.includes("num_")) return "units";
+
+  return "";
+}
+
 /* ─────────────────────────────────────────────
    DESIGN SYSTEM — Node Types & Styling
    ───────────────────────────────────────────── */
 const TYPE_CONFIG = {
   Equipment: {
-    radius: 26,
+    radius: 20,
     fill: "#0c2d48",
     stroke: "#00f0ff",
     glowColor: "rgba(0, 240, 255, 0.5)",
@@ -40,7 +142,7 @@ const TYPE_CONFIG = {
     label: "Process Unit",
   },
   Stream: {
-    radius: 17,
+    radius: 14,
     fill: "#0a2e1e",
     stroke: "#10b981",
     glowColor: "rgba(16, 185, 129, 0.4)",
@@ -48,7 +150,7 @@ const TYPE_CONFIG = {
     label: "Pipeline",
   },
   Sensor: {
-    radius: 15,
+    radius: 14,
     fill: "#1e1040",
     stroke: "#a855f7",
     glowColor: "rgba(168, 85, 247, 0.4)",
@@ -92,41 +194,59 @@ const EDGE_COLORS = {
    INITIAL SCHEMATIC COORDINATES (Spread 2D)
    ───────────────────────────────────────────── */
 const SCHEMATIC_POSITIONS = {
-  // Stage 1: Feed Sump
-  P_001:     { x: 120, y: 340 },
+  // Stage 1: Feed Ore & Water Sump (PB_001)
+  P_001:     { x: 80, y: 340 },
+  P_101:     { x: 80, y: 200 },
   PB_001:    { x: 280, y: 340 },
-  FM_PB_001: { x: 280, y: 500 },
+  PB001_Level_pct: { x: 220, y: 220 },
+  PB001_Sump_Temp_C: { x: 340, y: 220 },
+  FM_PB_001: { x: 280, y: 620 },
 
-  // Stage 2: Slurry Pump & Instrumentation
+  // Stage 2: Slurry Pump (SP_001)
   P_002:     { x: 440, y: 340 },
   SP_001:    { x: 600, y: 340 },
-  FIT_101:   { x: 600, y: 170 },
-  PIT_101:   { x: 600, y: 510 },
+  SP001_Motor_Power_kW: { x: 520, y: 180 },
+  SP001_Motor_Current_A: { x: 680, y: 180 },
+  SP001_Speed_RPM: { x: 480, y: 340 },
+  SP001_Discharge_Pressure_kPa: { x: 520, y: 500 },
+  SP001_Bearing_Temp_C: { x: 600, y: 500 },
+  SP001_Vibration_mms: { x: 680, y: 500 },
   FM_SP_001: { x: 600, y: 640 },
 
-  // Stage 3: Hydrocyclone Cluster
+  // Stage 3: Hydrocyclone Cluster (CY_001_A, B, C)
   P_003:     { x: 760, y: 340 },
 
-  CY_001_A:    { x: 940, y: 150 },
-  FM_CY_001_A: { x: 1110, y: 110 },
+  CY_001_A:    { x: 960, y: 160 },
+  CY001_Inlet_Pressure_A: { x: 840, y: 100 },
+  CY001_Vortex_DP_A: { x: 960, y: 80 },
+  CY001_Apex_Wear_A: { x: 1080, y: 100 },
+  FM_CY_001_A: { x: 960, y: 20 },
 
-  CY_001_B:    { x: 940, y: 340 },
-  PIT_301:     { x: 830, y: 230 },
-  FM_CY_001_B: { x: 1110, y: 340 },
+  CY_001_B:    { x: 960, y: 340 },
+  CY001_Inlet_Pressure_B: { x: 840, y: 280 },
+  CY001_Vortex_DP_B: { x: 960, y: 260 },
+  CY001_Apex_Wear_B: { x: 1080, y: 280 },
+  FM_CY_001_B: { x: 960, y: 200 },
 
-  CY_001_C:    { x: 940, y: 530 },
-  DIT_301:     { x: 830, y: 610 },
-  FM_CY_001_C: { x: 1110, y: 560 },
+  CY_001_C:    { x: 960, y: 520 },
+  CY001_Inlet_Pressure_C: { x: 840, y: 460 },
+  CY001_Vortex_DP_C: { x: 960, y: 440 },
+  CY001_Apex_Wear_C: { x: 1080, y: 460 },
+  FM_CY_001_C: { x: 960, y: 640 },
 
-  // Stage 4: Discharge & Underflow
-  P_006:     { x: 1240, y: 150 },
-  P_004:     { x: 1110, y: 440 },
+  // Stage 4: Discharge Streams
+  P_006:     { x: 1220, y: 160 },
+  P_004:     { x: 1140, y: 440 },
 
-  // Stage 5: Ball Mill & Recirculation
-  BM_001:    { x: 1280, y: 440 },
-  WIT_201:   { x: 1280, y: 280 },
-  AIT_201:   { x: 1280, y: 600 },
-  FM_BM_001: { x: 1280, y: 720 },
+  // Stage 5: Ball Mill & Recirculation (BM_001)
+  BM_001:    { x: 1320, y: 440 },
+  BM001_Power_Draw_kW: { x: 1240, y: 280 },
+  BM001_Motor_Current_A: { x: 1400, y: 280 },
+  BM001_Bearing_DE_Temp_C: { x: 1460, y: 380 },
+  BM001_Bearing_NDE_Temp_C: { x: 1460, y: 500 },
+  BM001_Vibration_mms: { x: 1320, y: 600 },
+  BM001_Sound_Level_dB: { x: 1200, y: 580 },
+  FM_BM_001: { x: 1320, y: 720 },
 
   P_005:     { x: 760, y: 720 },
 };
@@ -140,29 +260,56 @@ const STATIC_NODES = [
   { id: "BM_001", name: "Ball Mill Grinding Unit", type: "Equipment", category: "Grinding Mill", status: "FAIR", ...SCHEMATIC_POSITIONS.BM_001 },
 
   { id: "P_001", name: "Feed Ore Slurry", type: "Stream", category: "Pipeline", material: "Phosphate Ore Slurry", ...SCHEMATIC_POSITIONS.P_001 },
-  { id: "P_002", name: "Sump Discharge", type: "Stream", category: "Pipeline", material: "Sump Slurry", ...SCHEMATIC_POSITIONS.P_002 },
+  { id: "P_101", name: "Process Water Line", type: "Stream", category: "Pipeline", material: "Process Water", ...SCHEMATIC_POSITIONS.P_101 },
+  { id: "P_002", name: "Sump Discharge", type: "Stream", category: "Pipeline", material: "Diluted Slurry", ...SCHEMATIC_POSITIONS.P_002 },
   { id: "P_003", name: "Pump Discharge", type: "Stream", category: "Pipeline", material: "Pressurized Slurry", ...SCHEMATIC_POSITIONS.P_003 },
   { id: "P_004", name: "Cyclone Underflow", type: "Stream", category: "Pipeline", material: "Coarse Underflow", ...SCHEMATIC_POSITIONS.P_004 },
   { id: "P_005", name: "Mill Discharge", type: "Stream", category: "Pipeline", material: "Ground Pulp", ...SCHEMATIC_POSITIONS.P_005 },
   { id: "P_006", name: "Cyclone Overflow", type: "Stream", category: "Pipeline", material: "Fine Product Slurry", ...SCHEMATIC_POSITIONS.P_006 },
 
-  { id: "FIT_101", name: "Feed Flow Meter", type: "Sensor", category: "SCADA Tag", unit: "m³/h", ...SCHEMATIC_POSITIONS.FIT_101 },
-  { id: "PIT_101", name: "Pump Pressure Transducer", type: "Sensor", category: "SCADA Tag", unit: "bar", ...SCHEMATIC_POSITIONS.PIT_101 },
-  { id: "PIT_301", name: "Cyclone Pressure Gauge", type: "Sensor", category: "SCADA Tag", unit: "kPa", ...SCHEMATIC_POSITIONS.PIT_301 },
-  { id: "DIT_301", name: "Underflow Density Sensor", type: "Sensor", category: "SCADA Tag", unit: "g/L", ...SCHEMATIC_POSITIONS.DIT_301 },
-  { id: "WIT_201", name: "Mill Feed Scale", type: "Sensor", category: "SCADA Tag", unit: "t/h", ...SCHEMATIC_POSITIONS.WIT_201 },
-  { id: "AIT_201", name: "Acoustic Sensor", type: "Sensor", category: "SCADA Tag", unit: "dB", ...SCHEMATIC_POSITIONS.AIT_201 },
+  // SCADA Telemetry Tags (100% Aligned with assets.json and machine_health_timeseries.csv)
+  { id: "PB001_Level_pct", name: "Pump Box Sump Level", type: "Sensor", category: "SCADA Tag", unit: "%", ...SCHEMATIC_POSITIONS.PB001_Level_pct },
+  { id: "PB001_Sump_Temp_C", name: "Pump Box Sump Temp", type: "Sensor", category: "SCADA Tag", unit: "°C", ...SCHEMATIC_POSITIONS.PB001_Sump_Temp_C },
 
+  { id: "SP001_Discharge_Pressure_kPa", name: "Pump Discharge Pressure", type: "Sensor", category: "SCADA Tag", unit: "kPa", ...SCHEMATIC_POSITIONS.SP001_Discharge_Pressure_kPa },
+  { id: "SP001_Motor_Power_kW", name: "Pump Motor Power Draw", type: "Sensor", category: "SCADA Tag", unit: "kW", ...SCHEMATIC_POSITIONS.SP001_Motor_Power_kW },
+  { id: "SP001_Motor_Current_A", name: "Pump Motor Current", type: "Sensor", category: "SCADA Tag", unit: "A", ...SCHEMATIC_POSITIONS.SP001_Motor_Current_A },
+  { id: "SP001_Speed_RPM", name: "Pump Speed", type: "Sensor", category: "SCADA Tag", unit: "RPM", ...SCHEMATIC_POSITIONS.SP001_Speed_RPM },
+  { id: "SP001_Bearing_Temp_C", name: "Pump Bearing Temp", type: "Sensor", category: "SCADA Tag", unit: "°C", ...SCHEMATIC_POSITIONS.SP001_Bearing_Temp_C },
+  { id: "SP001_Vibration_mms", name: "Pump Vibration RMS", type: "Sensor", category: "SCADA Tag", unit: "mm/s", ...SCHEMATIC_POSITIONS.SP001_Vibration_mms },
+
+  { id: "CY001_Inlet_Pressure_A", name: "Cyclone A Inlet Pressure", type: "Sensor", category: "SCADA Tag", unit: "kPa", ...SCHEMATIC_POSITIONS.CY001_Inlet_Pressure_A },
+  { id: "CY001_Vortex_DP_A", name: "Cyclone A Vortex DP", type: "Sensor", category: "SCADA Tag", unit: "kPa", ...SCHEMATIC_POSITIONS.CY001_Vortex_DP_A },
+  { id: "CY001_Apex_Wear_A", name: "Cyclone A Apex Wear Index", type: "Sensor", category: "SCADA Tag", unit: "%", ...SCHEMATIC_POSITIONS.CY001_Apex_Wear_A },
+
+  { id: "CY001_Inlet_Pressure_B", name: "Cyclone B Inlet Pressure", type: "Sensor", category: "SCADA Tag", unit: "kPa", ...SCHEMATIC_POSITIONS.CY001_Inlet_Pressure_B },
+  { id: "CY001_Vortex_DP_B", name: "Cyclone B Vortex DP", type: "Sensor", category: "SCADA Tag", unit: "kPa", ...SCHEMATIC_POSITIONS.CY001_Vortex_DP_B },
+  { id: "CY001_Apex_Wear_B", name: "Cyclone B Apex Wear Index", type: "Sensor", category: "SCADA Tag", unit: "%", ...SCHEMATIC_POSITIONS.CY001_Apex_Wear_B },
+
+  { id: "CY001_Inlet_Pressure_C", name: "Cyclone C Inlet Pressure", type: "Sensor", category: "SCADA Tag", unit: "kPa", ...SCHEMATIC_POSITIONS.CY001_Inlet_Pressure_C },
+  { id: "CY001_Vortex_DP_C", name: "Cyclone C Vortex DP", type: "Sensor", category: "SCADA Tag", unit: "kPa", ...SCHEMATIC_POSITIONS.CY001_Vortex_DP_C },
+  { id: "CY001_Apex_Wear_C", name: "Cyclone C Apex Wear Index", type: "Sensor", category: "SCADA Tag", unit: "%", ...SCHEMATIC_POSITIONS.CY001_Apex_Wear_C },
+
+  { id: "BM001_Power_Draw_kW", name: "Mill Motor Power Draw", type: "Sensor", category: "SCADA Tag", unit: "kW", ...SCHEMATIC_POSITIONS.BM001_Power_Draw_kW },
+  { id: "BM001_Motor_Current_A", name: "Mill Motor Current", type: "Sensor", category: "SCADA Tag", unit: "A", ...SCHEMATIC_POSITIONS.BM001_Motor_Current_A },
+  { id: "BM001_Bearing_DE_Temp_C", name: "Drive-End Bearing Temp", type: "Sensor", category: "SCADA Tag", unit: "°C", ...SCHEMATIC_POSITIONS.BM001_Bearing_DE_Temp_C },
+  { id: "BM001_Bearing_NDE_Temp_C", name: "Non-Drive-End Bearing Temp", type: "Sensor", category: "SCADA Tag", unit: "°C", ...SCHEMATIC_POSITIONS.BM001_Bearing_NDE_Temp_C },
+  { id: "BM001_Vibration_mms", name: "Mill Shell Vibration", type: "Sensor", category: "SCADA Tag", unit: "mm/s", ...SCHEMATIC_POSITIONS.BM001_Vibration_mms },
+  { id: "BM001_Sound_Level_dB", name: "Acoustic Mill Charge Sound", type: "Sensor", category: "SCADA Tag", unit: "dB", ...SCHEMATIC_POSITIONS.BM001_Sound_Level_dB },
+
+  // Failure Modes
   { id: "FM_PB_001", name: "Level probe fouling risk", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_PB_001 },
   { id: "FM_SP_001", name: "Impeller and liner wear risk", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_SP_001 },
-  { id: "FM_CY_001_A", name: "Apex spigot erosion A", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_CY_001_A },
-  { id: "FM_CY_001_B", name: "Apex spigot erosion B", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_CY_001_B },
-  { id: "FM_CY_001_C", name: "Choked apex risk", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_CY_001_C },
+  { id: "FM_CY_001_A", name: "Apex wear & choke risk A", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_CY_001_A },
+  { id: "FM_CY_001_B", name: "Apex wear & choke risk B", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_CY_001_B },
+  { id: "FM_CY_001_C", name: "Apex wear & choke risk C", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_CY_001_C },
   { id: "FM_BM_001", name: "Trunnion bearing overheat risk", type: "FailureMode", category: "Risk Factor", ...SCHEMATIC_POSITIONS.FM_BM_001 },
 ];
 
 const STATIC_EDGES = [
+  // Process Stream Connections
   { source: "P_001", target: "PB_001", label: "FEEDS_INTO", type: "process" },
+  { source: "P_101", target: "PB_001", label: "WATER_INPUT", type: "process" },
   { source: "PB_001", target: "P_002", label: "DISCHARGES_TO", type: "process" },
   { source: "P_002", target: "SP_001", label: "FEEDS_INTO", type: "process" },
   { source: "SP_001", target: "P_003", label: "DISCHARGES_TO", type: "process" },
@@ -179,25 +326,43 @@ const STATIC_EDGES = [
   { source: "BM_001", target: "P_005", label: "DISCHARGES_TO", type: "process" },
   { source: "P_005", target: "PB_001", label: "RECIRCULATES", type: "process" },
 
-  { source: "FIT_101", target: "SP_001", label: "MONITORS", type: "telemetry" },
-  { source: "PIT_101", target: "SP_001", label: "MONITORS", type: "telemetry" },
-  { source: "WIT_201", target: "BM_001", label: "MONITORS", type: "telemetry" },
-  { source: "AIT_201", target: "BM_001", label: "MONITORS", type: "telemetry" },
-  { source: "PIT_301", target: "CY_001_B", label: "MONITORS", type: "telemetry" },
-  { source: "DIT_301", target: "CY_001_C", label: "MONITORS", type: "telemetry" },
+  // SCADA Telemetry Tags
+  { source: "PB001_Level_pct", target: "PB_001", label: "MONITORS", type: "telemetry" },
+  { source: "PB001_Sump_Temp_C", target: "PB_001", label: "MONITORS", type: "telemetry" },
 
+  { source: "SP001_Discharge_Pressure_kPa", target: "SP_001", label: "MONITORS", type: "telemetry" },
+  { source: "SP001_Motor_Power_kW", target: "SP_001", label: "MONITORS", type: "telemetry" },
+  { source: "SP001_Motor_Current_A", target: "SP_001", label: "MONITORS", type: "telemetry" },
+  { source: "SP001_Speed_RPM", target: "SP_001", label: "MONITORS", type: "telemetry" },
+  { source: "SP001_Bearing_Temp_C", target: "SP_001", label: "MONITORS", type: "telemetry" },
+  { source: "SP001_Vibration_mms", target: "SP_001", label: "MONITORS", type: "telemetry" },
+
+  { source: "CY001_Inlet_Pressure_A", target: "CY_001_A", label: "MONITORS", type: "telemetry" },
+  { source: "CY001_Vortex_DP_A", target: "CY_001_A", label: "MONITORS", type: "telemetry" },
+  { source: "CY001_Apex_Wear_A", target: "CY_001_A", label: "MONITORS", type: "telemetry" },
+
+  { source: "CY001_Inlet_Pressure_B", target: "CY_001_B", label: "MONITORS", type: "telemetry" },
+  { source: "CY001_Vortex_DP_B", target: "CY_001_B", label: "MONITORS", type: "telemetry" },
+  { source: "CY001_Apex_Wear_B", target: "CY_001_B", label: "MONITORS", type: "telemetry" },
+
+  { source: "CY001_Inlet_Pressure_C", target: "CY_001_C", label: "MONITORS", type: "telemetry" },
+  { source: "CY001_Vortex_DP_C", target: "CY_001_C", label: "MONITORS", type: "telemetry" },
+  { source: "CY001_Apex_Wear_C", target: "CY_001_C", label: "MONITORS", type: "telemetry" },
+
+  { source: "BM001_Power_Draw_kW", target: "BM_001", label: "MONITORS", type: "telemetry" },
+  { source: "BM001_Motor_Current_A", target: "BM_001", label: "MONITORS", type: "telemetry" },
+  { source: "BM001_Bearing_DE_Temp_C", target: "BM_001", label: "MONITORS", type: "telemetry" },
+  { source: "BM001_Bearing_NDE_Temp_C", target: "BM_001", label: "MONITORS", type: "telemetry" },
+  { source: "BM001_Vibration_mms", target: "BM_001", label: "MONITORS", type: "telemetry" },
+  { source: "BM001_Sound_Level_dB", target: "BM_001", label: "MONITORS", type: "telemetry" },
+
+  // Failure Mode Risks
   { source: "SP_001", target: "FM_SP_001", label: "RISKS", type: "risk" },
   { source: "BM_001", target: "FM_BM_001", label: "RISKS", type: "risk" },
   { source: "PB_001", target: "FM_PB_001", label: "RISKS", type: "risk" },
   { source: "CY_001_A", target: "FM_CY_001_A", label: "RISKS", type: "risk" },
   { source: "CY_001_B", target: "FM_CY_001_B", label: "RISKS", type: "risk" },
   { source: "CY_001_C", target: "FM_CY_001_C", label: "RISKS", type: "risk" },
-
-  { source: "FIT_101", target: "FM_SP_001", label: "DETECTS", type: "risk" },
-  { source: "PIT_101", target: "FM_SP_001", label: "DETECTS", type: "risk" },
-  { source: "AIT_201", target: "FM_BM_001", label: "DETECTS", type: "risk" },
-  { source: "PIT_301", target: "FM_CY_001_B", label: "DETECTS", type: "risk" },
-  { source: "DIT_301", target: "FM_CY_001_C", label: "DETECTS", type: "risk" },
 ];
 
 /* ─────────────────────────────────────────────
@@ -232,6 +397,7 @@ export default function KnowledgeGraphPage() {
   const [edges, setEdges] = useState(STATIC_EDGES);
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [telemetryData, setTelemetryData] = useState(null);
   const [filterType, setFilterType] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -268,29 +434,41 @@ export default function KnowledgeGraphPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.nodes && data.nodes.length > 0) {
-          const visNodes = data.nodes.filter((n) => n.type !== "WorkOrder" && n.type !== "Technician");
-          const visNodeIds = new Set(visNodes.map((n) => n.id));
-          const bkEdges = (data.edges || []).filter((e) => visNodeIds.has(e.source) && visNodeIds.has(e.target));
-
-          const edgeKeys = new Set(bkEdges.map((e) => `${e.source}→${e.target}→${e.label}`));
-          const mergedEdges = [...bkEdges];
-          STATIC_EDGES.forEach((se) => {
-            const k = `${se.source}→${se.target}→${se.label}`;
-            if (!edgeKeys.has(k) && visNodeIds.has(se.source) && visNodeIds.has(se.target)) {
-              mergedEdges.push(se);
-              edgeKeys.add(k);
-            }
-          });
-
-          const mergedNodes = visNodes.map((n) => {
-            const pos = SCHEMATIC_POSITIONS[n.id] || STATIC_NODES.find((s) => s.id === n.id);
-            return {
+          const OBSOLETE_TAGS = new Set([
+            "DIT_301", "PIT_301", "PIT_101", "FIT_101", "FIT_201", "LIT_101", "TIT_101",
+            "VIT_101", "JIT_201", "AIT_201", "TIT_401", "VIT_201", "PIT_301_A", "DIT_301_A",
+            "PIT_301_B", "DIT_301_B", "PIT_301_C", "DIT_301_C", "WIT_301_A", "WIT_301_B", "WIT_301_C"
+          ]);
+          const visNodes = data.nodes.filter((n) => n.type !== "WorkOrder" && n.type !== "Technician" && !OBSOLETE_TAGS.has(n.id));
+          
+          const nodeMap = new Map();
+          STATIC_NODES.forEach((s) => nodeMap.set(s.id, s));
+          visNodes.forEach((n) => {
+            const pos = SCHEMATIC_POSITIONS[n.id] || nodeMap.get(n.id);
+            nodeMap.set(n.id, {
               ...n,
               x: pos?.x || n.x || 600,
               y: pos?.y || n.y || 400,
               vx: 0,
               vy: 0,
-            };
+            });
+          });
+
+          const mergedNodes = Array.from(nodeMap.values());
+          const visNodeIds = new Set(mergedNodes.map((n) => n.id));
+          const bkEdges = (data.edges || []).filter((e) => visNodeIds.has(e.source) && visNodeIds.has(e.target));
+
+          const rawMergedEdges = [...bkEdges, ...STATIC_EDGES];
+          const pairSet = new Set();
+          const mergedEdges = [];
+          rawMergedEdges.forEach((e) => {
+            if (visNodeIds.has(e.source) && visNodeIds.has(e.target)) {
+              const pairKey = `${e.source}->${e.target}`;
+              if (!pairSet.has(pairKey)) {
+                pairSet.add(pairKey);
+                mergedEdges.push(e);
+              }
+            }
           });
 
           setNodes(mergedNodes);
@@ -443,7 +621,11 @@ export default function KnowledgeGraphPage() {
     setTransform({ x: 40, y: 20, scale: 0.8 });
   };
 
-  /* ── Canvas Pan & Zoom ── */
+  /* ── Canvas Pan, Zoom & Node Dragging ── */
+  const panDistanceRef = useRef(0);
+  const nodeDragDistanceRef = useRef(0);
+  const nodeMouseDownRef = useRef(null);
+
   const handleWheel = (e) => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.12 : 0.88;
@@ -453,43 +635,63 @@ export default function KnowledgeGraphPage() {
   const handleCanvasMouseDown = (e) => {
     if (e.target.tagName === "svg" || e.target.id === "canvas-bg") {
       setIsPanning(true);
-      if (!pathMode) setSelectedNodeId(null);
+      panDistanceRef.current = 0;
       setPanStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
     }
   };
 
   const handleNodeMouseDown = (e, node) => {
     e.stopPropagation();
-    if (pathMode) {
-      if (!pathSource) {
-        setPathSource(node.id);
-        setPathTarget(null);
-        setSelectedNodeId(node.id);
-      } else if (!pathTarget && node.id !== pathSource) {
-        setPathTarget(node.id);
-      } else {
-        setPathSource(node.id);
-        setPathTarget(null);
-        setSelectedNodeId(node.id);
-      }
-    } else {
-      setSelectedNodeId(selectedNodeId === node.id ? null : node.id);
-    }
+    nodeMouseDownRef.current = node;
+    nodeDragDistanceRef.current = 0;
     setDraggedNode(node.id);
   };
 
   const handleMouseMove = (e) => {
     if (draggedNode && svgRef.current) {
+      nodeDragDistanceRef.current += Math.abs(e.movementX) + Math.abs(e.movementY);
       const r = svgRef.current.getBoundingClientRect();
       const cx = (e.clientX - r.left - transform.x) / transform.scale;
       const cy = (e.clientY - r.top - transform.y) / transform.scale;
       setNodes((prev) => prev.map((n) => (n.id === draggedNode ? { ...n, x: cx, y: cy, vx: 0, vy: 0 } : n)));
     } else if (isPanning) {
+      panDistanceRef.current += Math.abs(e.movementX) + Math.abs(e.movementY);
       setTransform((p) => ({ ...p, x: e.clientX - panStart.x, y: e.clientY - panStart.y }));
     }
   };
 
   const handleMouseUp = () => {
+    // 1. Handle stationary node click selection (< 5px drag distance)
+    if (draggedNode && nodeMouseDownRef.current) {
+      const node = nodeMouseDownRef.current;
+      const totalMoved = nodeDragDistanceRef.current;
+
+      if (totalMoved < 5) {
+        if (pathMode) {
+          if (!pathSource) {
+            setPathSource(node.id);
+            setPathTarget(null);
+            setSelectedNodeId(node.id);
+          } else if (!pathTarget && node.id !== pathSource) {
+            setPathTarget(node.id);
+          } else {
+            setPathSource(node.id);
+            setPathTarget(null);
+            setSelectedNodeId(node.id);
+          }
+        } else {
+          setSelectedNodeId((prev) => (prev === node.id ? null : node.id));
+        }
+      }
+    }
+
+    // 2. Handle canvas background stationary click deselect (< 5px pan distance)
+    if (isPanning && panDistanceRef.current < 5) {
+      if (!pathMode) setSelectedNodeId(null);
+    }
+
+    nodeMouseDownRef.current = null;
+    nodeDragDistanceRef.current = 0;
     setDraggedNode(null);
     setIsPanning(false);
   };
@@ -536,6 +738,35 @@ export default function KnowledgeGraphPage() {
     }
   }, [selectedNodeId, nodes, edges, expandedHops, fetchWorkOrders]);
 
+  /* ── Telemetry Fetching for Graph Node ── */
+  useEffect(() => {
+    if (!selectedNodeId) {
+      setTelemetryData(null);
+      return;
+    }
+    const targetNode = nodes.find((n) => n.id === selectedNodeId);
+    if (!targetNode || (targetNode.type !== "Equipment" && targetNode.type !== "Stream")) {
+      setTelemetryData(null);
+      return;
+    }
+
+    const tagToFetch = targetNode.id.startsWith("CY_001") ? "CY_001" : targetNode.id;
+    const fetchTelemetry = async () => {
+      try {
+        const res = await fetch(`${API}/api/v1/assets/${tagToFetch}/telemetry`);
+        if (res.ok) {
+          const data = await res.json();
+          setTelemetryData(data);
+        }
+      } catch (e) {
+        console.error("Error fetching telemetry for graph node:", e);
+      }
+    };
+    fetchTelemetry();
+    const interval = setInterval(fetchTelemetry, 2000);
+    return () => clearInterval(interval);
+  }, [selectedNodeId, nodes]);
+
   /* ── Filtered Nodes ── */
   const filteredNodes = nodes.filter((n) => {
     const matchType = filterType === "ALL" || n.type === filterType;
@@ -571,7 +802,7 @@ export default function KnowledgeGraphPage() {
       hopEdgeSet.add(`${e.target}-${e.source}`);
     });
   }
-  const hasHopHighlight = selectedNodeId && hopNodeSet.size > 1;
+  const hasHopHighlight = !pathMode && selectedNodeId && hopNodeSet.size > 1;
 
   return (
     <div
@@ -597,92 +828,6 @@ export default function KnowledgeGraphPage() {
           <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "800", color: "#00f0ff", letterSpacing: "0.4px" }}>
             Industrial Knowledge Graph & Topology Engine
           </h2>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          {/* Path Tracing Button */}
-          <button
-            onClick={() => {
-              setPathMode(!pathMode);
-              if (pathMode) { setPathSource(null); setPathTarget(null); setTracedPath(null); }
-            }}
-            style={{
-              background: pathMode
-                ? "linear-gradient(135deg, rgba(14, 116, 144, 0.4), rgba(0, 240, 255, 0.2))"
-                : "#162032",
-              border: `1px solid ${pathMode ? "#00f0ff" : "#1e293b"}`,
-              color: pathMode ? "#00f0ff" : "#94a3b8",
-              borderRadius: "6px",
-              padding: "0.35rem 0.7rem",
-              fontSize: "0.75rem",
-              fontWeight: "700",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-            }}
-          >
-            <Route size={13} /> {pathMode ? "TRACING ON" : "Trace Path"}
-          </button>
-
-          {/* Physics Animation Toggle */}
-          <button
-            onClick={() => setPhysicsRunning(!physicsRunning)}
-            style={{
-              background: "#162032",
-              border: `1px solid ${physicsRunning ? "#00f0ff" : "#1e293b"}`,
-              color: physicsRunning ? "#00f0ff" : "#94a3b8",
-              borderRadius: "6px",
-              padding: "0.35rem 0.65rem",
-              fontSize: "0.75rem",
-              fontWeight: "700",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-            }}
-          >
-            {physicsRunning ? <Pause size={13} /> : <Play size={13} />}
-            {physicsRunning ? "Freeze Layout" : "Live Physics"}
-          </button>
-
-          <button
-            onClick={resetLayout}
-            style={{
-              background: "#162032",
-              border: "1px solid #1e293b",
-              color: "#cbd5e1",
-              borderRadius: "6px",
-              padding: "0.35rem 0.65rem",
-              fontSize: "0.75rem",
-              fontWeight: "700",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-            }}
-          >
-            <Wand2 size={13} /> Clean Layout
-          </button>
-
-          <button
-            onClick={fetchGraphTopology}
-            style={{
-              background: "#162032",
-              border: "1px solid #1e293b",
-              color: "#00f0ff",
-              borderRadius: "6px",
-              padding: "0.35rem 0.65rem",
-              fontSize: "0.75rem",
-              fontWeight: "700",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-            }}
-          >
-            <RefreshCw size={13} /> Sync ({nodes.length})
-          </button>
         </div>
       </div>
 
@@ -796,7 +941,7 @@ export default function KnowledgeGraphPage() {
             }
           </span>
           <button
-            onClick={() => { setPathSource(null); setPathTarget(null); setTracedPath(null); }}
+            onClick={() => { setPathMode(false); setPathSource(null); setPathTarget(null); setTracedPath(null); }}
             style={{ marginLeft: "auto", background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
           >
             <X size={14} />
@@ -819,36 +964,93 @@ export default function KnowledgeGraphPage() {
           {/* Legend */}
           <div style={{
             position: "absolute", top: "0.7rem", left: "0.7rem", zIndex: 10,
-            display: "flex", gap: "0.75rem",
-            background: "rgba(6, 10, 18, 0.92)", border: "1px solid #1e293b",
-            padding: "0.35rem 0.7rem", borderRadius: "6px", fontSize: "0.65rem",
+            display: "flex", flexDirection: "column", gap: "0.35rem",
+            background: "rgba(6, 10, 18, 0.94)", border: "1px solid #1e293b",
+            padding: "0.4rem 0.75rem", borderRadius: "6px", fontSize: "0.65rem",
           }}>
-            {Object.entries(TYPE_CONFIG).slice(0, 4).map(([type, cfg]) => (
-              <span key={type} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: cfg.color }}>
-                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: cfg.stroke, boxShadow: `0 0 6px ${cfg.stroke}` }} />
-                {cfg.label}
-              </span>
-            ))}
+            <div style={{ display: "flex", gap: "0.75rem" }}>
+              {Object.entries(TYPE_CONFIG).slice(0, 4).map(([type, cfg]) => (
+                <span key={type} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: cfg.color }}>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: cfg.stroke, boxShadow: `0 0 6px ${cfg.stroke}` }} />
+                  {cfg.label}
+                </span>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "0.75rem", color: "#64748b", borderTop: "1px solid #1e293b", paddingTop: "0.3rem" }}>
+              <span><strong style={{ color: "#00f0ff" }}>───</strong> Process Stream</span>
+              <span><strong style={{ color: "#c084fc" }}>- - -</strong> SCADA Telemetry</span>
+              <span><strong style={{ color: "#ef4444" }}>. . .</strong> Failure Risk</span>
+            </div>
           </div>
 
-          {/* Canvas Controls */}
+          {/* Canvas Controls Overlay */}
           <div style={{
             position: "absolute", top: "0.7rem", right: "0.7rem", zIndex: 10,
             display: "flex", alignItems: "center", gap: "0.3rem",
             background: "rgba(6, 10, 18, 0.95)", border: "1px solid #1e293b",
             borderRadius: "8px", padding: "0.3rem 0.4rem",
           }}>
+            {/* Trace Path Icon */}
+            <button
+              onClick={() => {
+                setPathMode(!pathMode);
+                if (pathMode) { setPathSource(null); setPathTarget(null); setTracedPath(null); }
+              }}
+              title={pathMode ? "Disable Path Tracing" : "Trace Path (Root Cause Traversal)"}
+              style={{
+                background: pathMode ? "rgba(0, 240, 255, 0.25)" : "#162032",
+                border: `1px solid ${pathMode ? "#00f0ff" : "#1e293b"}`,
+                color: pathMode ? "#00f0ff" : "#94a3b8",
+                borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center"
+              }}
+            >
+              <Route size={15} />
+            </button>
+
+            {/* Live Physics Icon */}
+            <button
+              onClick={() => setPhysicsRunning(!physicsRunning)}
+              title={physicsRunning ? "Freeze Physics Layout" : "Live Force-Directed Physics"}
+              style={{
+                background: physicsRunning ? "rgba(0, 240, 255, 0.25)" : "#162032",
+                border: `1px solid ${physicsRunning ? "#00f0ff" : "#1e293b"}`,
+                color: physicsRunning ? "#00f0ff" : "#94a3b8",
+                borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center"
+              }}
+            >
+              {physicsRunning ? <Pause size={15} /> : <Play size={15} />}
+            </button>
+
+            {/* Clean Layout Icon */}
+            <button
+              onClick={resetLayout}
+              title="Clean Schematic Layout"
+              style={{ background: "#162032", border: "1px solid #1e293b", color: "#cbd5e1", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+            >
+              <Wand2 size={15} />
+            </button>
+
+            {/* Sync Topology Icon */}
+            <button
+              onClick={fetchGraphTopology}
+              title={`Sync Topology (${nodes.length} nodes)`}
+              style={{ background: "#162032", border: "1px solid #1e293b", color: "#00f0ff", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+            >
+              <RefreshCw size={15} />
+            </button>
+
+            <span style={{ height: "14px", width: "1px", background: "#334155", margin: "0 0.1rem" }} />
+
             <button onClick={() => setShowAllLinks(!showAllLinks)} title={showAllLinks ? "Focus Mode" : "Show All Links"} style={{ background: showAllLinks ? "rgba(0, 240, 255, 0.2)" : "#162032", border: `1px solid ${showAllLinks ? "#00f0ff" : "#1e293b"}`, color: showAllLinks ? "#00f0ff" : "#cbd5e1", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
               {showAllLinks ? <Eye size={15} /> : <EyeOff size={15} />}
             </button>
-            <span style={{ height: "14px", width: "1px", background: "#334155", margin: "0 0.1rem" }} />
-            <button onClick={() => setTransform((p) => ({ ...p, scale: Math.min(4, p.scale * 1.25) }))} style={{ background: "#162032", border: "1px solid #1e293b", color: "#00f0ff", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <button onClick={() => setTransform((p) => ({ ...p, scale: Math.min(4, p.scale * 1.25) }))} title="Zoom In" style={{ background: "#162032", border: "1px solid #1e293b", color: "#00f0ff", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
               <ZoomIn size={15} />
             </button>
-            <button onClick={() => setTransform((p) => ({ ...p, scale: Math.max(0.2, p.scale * 0.8) }))} style={{ background: "#162032", border: "1px solid #1e293b", color: "#00f0ff", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <button onClick={() => setTransform((p) => ({ ...p, scale: Math.max(0.2, p.scale * 0.8) }))} title="Zoom Out" style={{ background: "#162032", border: "1px solid #1e293b", color: "#00f0ff", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
               <ZoomOut size={15} />
             </button>
-            <button onClick={() => setTransform({ x: 40, y: 20, scale: 0.8 })} style={{ background: "#162032", border: "1px solid #1e293b", color: "#cbd5e1", borderRadius: "5px", padding: "0.35rem 0.5rem", fontSize: "0.68rem", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}>
+            <button onClick={() => setTransform({ x: 40, y: 20, scale: 0.8 })} title="Reset Viewport Scale" style={{ background: "#162032", border: "1px solid #1e293b", color: "#cbd5e1", borderRadius: "5px", padding: "0.35rem 0.5rem", fontSize: "0.68rem", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}>
               <Maximize2 size={13} /> {Math.round(transform.scale * 100)}%
             </button>
           </div>
@@ -917,12 +1119,16 @@ export default function KnowledgeGraphPage() {
                   const edgeKey = `${edge.source}-${edge.target}`;
                   const isOnPath = tracedEdgeSet.has(edgeKey);
                   const isHopEdge = !isTracing && hasHopHighlight && hopEdgeSet.has(edgeKey);
-                  const baseColor = EDGE_COLORS[edge.type] || "#38bdf8";
+                  const actualType = edge.type || (
+                    edge.label === "RISKS" || edge.label === "RISKS_FAILURE" ? "risk" :
+                    edge.label === "MONITORS" || edge.label === "MONITORS_TELEMETRY" ? "telemetry" : "process"
+                  );
+                  const baseColor = EDGE_COLORS[actualType] || "#38bdf8";
 
                   let strokeColor = baseColor;
-                  let strokeWidth = 1.2;
-                  let opacity = 0.5;
-                  let dashArray = edge.type === "telemetry" ? "4 3" : edge.type === "risk" ? "2 2" : "none";
+                  let strokeWidth = actualType === "process" ? 2.2 : 2.0;
+                  let opacity = 0.9;
+                  let dashArray = actualType === "telemetry" ? "6 4" : actualType === "risk" ? "3 4" : "none";
 
                   if (isTracing) {
                     if (isOnPath) {
@@ -931,9 +1137,9 @@ export default function KnowledgeGraphPage() {
                       strokeColor = "#111827"; strokeWidth = 0.5; opacity = 0.1;
                     }
                   } else if (isSelected) {
-                    strokeColor = "#00f0ff"; strokeWidth = 2.5; opacity = 1;
+                    strokeColor = actualType === "risk" ? "#ef4444" : "#00f0ff"; strokeWidth = 2.8; opacity = 1;
                   } else if (isHopEdge) {
-                    strokeColor = baseColor; strokeWidth = 1.8; opacity = 0.8;
+                    strokeColor = baseColor; strokeWidth = 2.0; opacity = 0.9;
                   } else if (hasHopHighlight) {
                     strokeColor = "#111827"; strokeWidth = 0.5; opacity = 0.08;
                   } else if (!showAllLinks) {
@@ -968,35 +1174,39 @@ export default function KnowledgeGraphPage() {
                         stroke={strokeColor}
                         strokeWidth={strokeWidth}
                         strokeDasharray={dashArray}
+                        strokeLinecap={actualType === "risk" ? "round" : "butt"}
                         opacity={opacity}
                         markerEnd={isSelected || isOnPath || isHopEdge ? "url(#arrow-path)" : "url(#arrow-process)"}
-                        filter={isOnPath ? "url(#glow-neon)" : "none"}
+                        filter={isOnPath || (isSelected && actualType === "risk") ? "url(#glow-neon)" : "none"}
                       />
                       {/* Edge Label on distinct arc midpoint */}
-                      {(isSelected || isOnPath || isHopEdge) && (
-                        <g>
-                          <rect
-                            x={mx - (edge.label.length * 2.8 + 6)}
-                            y={my - 7}
-                            width={edge.label.length * 5.6 + 12}
-                            height={14}
-                            rx={3}
-                            fill="rgba(6, 10, 18, 0.95)"
-                            stroke={isOnPath ? "#22d3ee" : strokeColor}
-                            strokeWidth={0.6}
-                          />
-                          <text
-                            x={mx}
-                            y={my + 3}
-                            fill={isOnPath ? "#22d3ee" : strokeColor}
-                            fontSize="6.5"
-                            fontWeight="700"
-                            textAnchor="middle"
-                          >
-                            {edge.label}
-                          </text>
-                        </g>
-                      )}
+                      {(isSelected || isOnPath || isHopEdge) && (() => {
+                        const lw = edge.label.length * 4.5 + 8;
+                        return (
+                          <g>
+                            <rect
+                              x={mx - lw / 2}
+                              y={my - 6}
+                              width={lw}
+                              height={12}
+                              rx={3}
+                              fill="rgba(6, 10, 18, 0.95)"
+                              stroke={isOnPath ? "#22d3ee" : strokeColor}
+                              strokeWidth={0.6}
+                            />
+                            <text
+                              x={mx}
+                              y={my + 2.5}
+                              fill={isOnPath ? "#22d3ee" : strokeColor}
+                              fontSize="6"
+                              fontWeight="700"
+                              textAnchor="middle"
+                            >
+                              {edge.label}
+                            </text>
+                          </g>
+                        );
+                      })()}
                     </g>
                   );
                 });
@@ -1015,6 +1225,10 @@ export default function KnowledgeGraphPage() {
                 const cond = equipmentConditions[node.id];
                 const condColor = cond?.isOverdue ? "#ef4444" : cond?.condition === "FAIR" ? "#f59e0b" : "#10b981";
 
+                const idStr = String(node.id || "");
+                const shortSymbol = node.type === "FailureMode" ? "FM" : idStr.split('_')[0];
+                const pillWidth = Math.max(36, idStr.length * 5.2 + 10);
+
                 return (
                   <g
                     key={node.id}
@@ -1028,18 +1242,18 @@ export default function KnowledgeGraphPage() {
                     {/* Outer condition ring for equipment */}
                     {node.type === "Equipment" && (
                       <circle
-                        r={cfg.radius + 5}
+                        r={cfg.radius + 4}
                         fill="none"
                         stroke={condColor}
-                        strokeWidth={2.5}
-                        opacity={0.7}
+                        strokeWidth={2}
+                        opacity={0.8}
                       />
                     )}
 
                     {/* Glowing Selection Ring */}
                     {(isSelected || isPathNode) && (
                       <circle
-                        r={cfg.radius + 8}
+                        r={cfg.radius + 6}
                         fill="none"
                         stroke={isPathNode ? "#22d3ee" : "#00f0ff"}
                         strokeWidth={2}
@@ -1047,7 +1261,7 @@ export default function KnowledgeGraphPage() {
                       />
                     )}
 
-                    {/* Main Node Circle */}
+                    {/* Main Compact Node Circle */}
                     <circle
                       r={cfg.radius}
                       fill={cfg.fill}
@@ -1056,34 +1270,61 @@ export default function KnowledgeGraphPage() {
                       filter={isSelected || isOnTracedPath ? "url(#glow-neon)" : "none"}
                     />
 
-                    {/* Node Tag ID */}
+                    {/* Category Monogram inside circle */}
                     <text
                       y={0}
                       fill={cfg.color}
-                      fontSize={node.type === "Equipment" ? "9.5" : "7.5"}
-                      fontWeight="800"
+                      fontSize={node.type === "Equipment" ? "8.5" : "7"}
+                      fontWeight="900"
                       textAnchor="middle"
                       fontFamily="monospace"
                       dominantBaseline="central"
                     >
-                      {node.id}
+                      {shortSymbol}
                     </text>
+
+                    {/* Attached Pill Badge for Full Tag ID Below Circle (Fit to text) */}
+                    <g transform={`translate(0, ${cfg.radius + 10})`}>
+                      <rect
+                        x={-pillWidth / 2}
+                        y={-6}
+                        width={pillWidth}
+                        height={12}
+                        rx={3}
+                        fill="rgba(6, 10, 18, 0.95)"
+                        stroke={isSelected ? "#ffffff" : cfg.stroke}
+                        strokeWidth={isSelected ? 1 : 0.6}
+                      />
+                      <text
+                        x={0}
+                        y={0.5}
+                        fill={cfg.color}
+                        fontSize="6"
+                        fontWeight="800"
+                        textAnchor="middle"
+                        fontFamily="monospace"
+                        dominantBaseline="central"
+                      >
+                        {idStr}
+                      </text>
+                    </g>
                   </g>
                 );
               })}
 
-              {/* Hover Tooltip */}
+              {/* Hover Tooltip (Fit tightly to text) */}
               {hoveredNode && !draggedNode && (() => {
                 const cfg = TYPE_CONFIG[hoveredNode.type] || TYPE_CONFIG.Equipment;
-                const tw = Math.max(130, hoveredNode.name.length * 6 + 24);
-                const th = hoveredNode.type === "Equipment" ? 52 : 40;
+                const maxTextLen = Math.max(hoveredNode.id.length * 5.2, hoveredNode.name.length * 4.6);
+                const tw = Math.max(75, maxTextLen + 16);
+                const th = hoveredNode.type === "Equipment" ? 46 : 36;
                 return (
                   <g transform={`translate(${hoveredNode.x + cfg.radius + 8}, ${hoveredNode.y - th / 2})`} style={{ pointerEvents: "none" }}>
-                    <rect x={0} y={0} width={tw} height={th} rx={5} fill="rgba(6, 10, 18, 0.96)" stroke={cfg.stroke} strokeWidth={0.8} />
-                    <text x={8} y={14} fill={cfg.color} fontSize="8.5" fontWeight="800" fontFamily="monospace">{hoveredNode.id}</text>
-                    <text x={8} y={28} fill="#e2e8f0" fontSize="7.5" fontWeight="600">{hoveredNode.name}</text>
+                    <rect x={0} y={0} width={tw} height={th} rx={4} fill="rgba(6, 10, 18, 0.96)" stroke={cfg.stroke} strokeWidth={0.8} />
+                    <text x={8} y={13} fill={cfg.color} fontSize="8" fontWeight="800" fontFamily="monospace">{hoveredNode.id}</text>
+                    <text x={8} y={26} fill="#e2e8f0" fontSize="7" fontWeight="600">{hoveredNode.name}</text>
                     {hoveredNode.type === "Equipment" && (
-                      <text x={8} y={42} fill="#64748b" fontSize="6.5" fontWeight="600">{hoveredNode.status || "Active"}</text>
+                      <text x={8} y={38} fill="#64748b" fontSize="6" fontWeight="600">{hoveredNode.status || "Active"}</text>
                     )}
                   </g>
                 );
@@ -1145,6 +1386,48 @@ export default function KnowledgeGraphPage() {
                   </div>
                 </div>
 
+                {/* Synchronized Telemetry & Derived Metrics Drawer Section */}
+                {telemetryData && (
+                  <div
+                    style={{
+                      background: "#060a12",
+                      border: "1px solid #1e293b",
+                      borderRadius: "8px",
+                      padding: "0.6rem 0.75rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.4rem",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div style={{ color: "#00f0ff", fontSize: "0.72rem", fontWeight: "800", borderBottom: "1px solid #1e293b", paddingBottom: "0.35rem" }}>
+                      LIVE TELEMETRY & DERIVED KPIS
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.35rem", maxHeight: "160px", overflowY: "auto" }}>
+                      {telemetryData.live_metrics &&
+                        Object.entries(telemetryData.live_metrics).map(([k, v]) => (
+                          <div key={k} style={{ background: "#111827", border: "1px solid #1e293b", padding: "0.35rem 0.5rem", borderRadius: "5px" }}>
+                            <div style={{ color: "#94a3b8", fontSize: "0.6rem", fontWeight: "600" }}>{getDisplayMetricName(k)}</div>
+                            <div style={{ color: "#00f0ff", fontSize: "0.82rem", fontWeight: "800", fontFamily: "monospace", marginTop: "0.1rem", display: "flex", alignItems: "baseline", gap: "0.25rem" }}>
+                              <span>{typeof v === "number" ? v.toFixed(2) : v}</span>
+                              {getMetricUnit(k) && <span style={{ color: "#38bdf8", fontSize: "0.65rem", fontWeight: "700", fontFamily: "sans-serif" }}>{getMetricUnit(k)}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      {telemetryData.derived_metrics &&
+                        Object.entries(telemetryData.derived_metrics).map(([k, v]) => (
+                          <div key={k} style={{ background: "#111827", border: "1px solid #a855f7", padding: "0.35rem 0.5rem", borderRadius: "5px" }}>
+                            <div style={{ color: "#c084fc", fontSize: "0.6rem", fontWeight: "600" }}>{getDisplayMetricName(k)}</div>
+                            <div style={{ color: "#a855f7", fontSize: "0.82rem", fontWeight: "800", fontFamily: "monospace", marginTop: "0.1rem", display: "flex", alignItems: "baseline", gap: "0.25rem" }}>
+                              <span>{typeof v === "number" ? v.toFixed(2) : v}</span>
+                              {getMetricUnit(k) && <span style={{ color: "#38bdf8", fontSize: "0.65rem", fontWeight: "700", fontFamily: "sans-serif" }}>{getMetricUnit(k)}</span>}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Multi-Hop Neighbor Radius Selector */}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                   <span style={{ color: "#64748b", fontSize: "0.7rem", fontWeight: "700" }}>HOPS:</span>
@@ -1177,12 +1460,14 @@ export default function KnowledgeGraphPage() {
                   display: "flex",
                   flexDirection: "column",
                   gap: "0.4rem",
+                  flex: 1,
+                  minHeight: "220px",
                 }}>
-                  <div style={{ color: "#00f0ff", fontSize: "0.72rem", fontWeight: "800", borderBottom: "1px solid #1e293b", paddingBottom: "0.35rem", display: "flex", justifyContent: "space-between" }}>
+                  <div style={{ color: "#00f0ff", fontSize: "0.72rem", fontWeight: "800", borderBottom: "1px solid #1e293b", paddingBottom: "0.35rem", display: "flex", justifyContent: "space-between", flexShrink: 0 }}>
                     <span>CONNECTED NEIGHBORS</span>
                     <span>({inspectorData.neighbors?.length || 0})</span>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", maxHeight: "180px", overflowY: "auto" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", flex: 1, minHeight: 0, overflowY: "auto" }}>
                     {inspectorData.neighbors?.map((nbr) => {
                       const cfg = TYPE_CONFIG[nbr.type] || TYPE_CONFIG.Equipment;
                       return (
@@ -1223,11 +1508,12 @@ export default function KnowledgeGraphPage() {
                     display: "flex",
                     flexDirection: "column",
                     gap: "0.35rem",
+                    flexShrink: 0,
                   }}>
                     <div style={{ color: "#fb923c", fontSize: "0.72rem", fontWeight: "800", borderBottom: "1px solid #1e293b", paddingBottom: "0.35rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
                       <Wrench size={12} /> MAINTENANCE HISTORY ({workOrders.length})
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", maxHeight: "200px", overflowY: "auto" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", maxHeight: "140px", overflowY: "auto" }}>
                       {workOrders.slice(0, 8).map((wo, i) => (
                         <div key={i} style={{
                           background: "#111827",

@@ -15,8 +15,8 @@ class AssetService:
     def __init__(
         self,
         assets_file_path: Optional[str | Path] = None,
-        equipment_repo: Optional[EquipmentRepository] = None,
-        maintenance_repo: Optional[MaintenanceRepository] = None,
+        equipment_repo: Optional[EquipmentRepository | str | Path] = None,
+        maintenance_repo: Optional[MaintenanceRepository | str | Path] = None,
     ):
         self.assets_file_path = Path(assets_file_path) if assets_file_path else settings.ASSETS_PATH
         if not self.assets_file_path.exists():
@@ -28,8 +28,20 @@ class AssetService:
                 raise FileNotFoundError(f"Assets configuration not found at: {self.assets_file_path}")
 
         self._assets: Dict[str, Any] = json.loads(self.assets_file_path.read_text())
-        self.equipment_repo = equipment_repo or EquipmentRepository()
-        self.maintenance_repo = maintenance_repo or MaintenanceRepository()
+
+        if isinstance(equipment_repo, (str, Path)):
+            self.equipment_repo = EquipmentRepository(Path(equipment_repo))
+        elif equipment_repo is not None:
+            self.equipment_repo = equipment_repo
+        else:
+            self.equipment_repo = EquipmentRepository()
+
+        if isinstance(maintenance_repo, (str, Path)):
+            self.maintenance_repo = MaintenanceRepository(Path(maintenance_repo))
+        elif maintenance_repo is not None:
+            self.maintenance_repo = maintenance_repo
+        else:
+            self.maintenance_repo = MaintenanceRepository()
 
     def get_all_assets(self) -> Dict[str, Any]:
         """Return the complete dictionary of asset definitions."""
