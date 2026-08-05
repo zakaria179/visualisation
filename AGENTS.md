@@ -109,9 +109,38 @@ digital-twin-dashboard/
   1. Added missing SCADA Tag sensor nodes in `KnowledgeGraphPage.jsx` for Slurry Pump (`SP001_Motor_Current_A`, `SP001_Speed_RPM`, `SP001_Bearing_Temp_C`), Hydrocyclones (`CY001_Vortex_DP_A`, `CY001_Vortex_DP_B`, `CY001_Vortex_DP_C`), and Ball Mill (`BM001_Motor_Current_A`, `BM001_Bearing_NDE_Temp_C`).
   2. Linked all newly added SCADA sensor nodes to `SP_001`, `CY_001_A/B/C`, and `BM_001` with `MONITORS` telemetry edges.
   3. Expanded `StreamNode` rect width to `114px` in `Flowsheet.jsx` and updated `pillWidth` formula (`Math.max(36, idStr.length * 5.2 + 10)`) in `KnowledgeGraphPage.jsx` to prevent label text from overflowing node boundaries. Verified via clean `npm --prefix frontend run build` and backend unit tests.
-
-
-
+- **Codebase Onboarding & Architectural Roadmap**: Formulated a structured 6-phase learning guide for walking through the project folder-by-folder and file-by-file (Data Datasets $\rightarrow$ Backend Core/Domains $\rightarrow$ API Layer $\rightarrow$ Infrastructure/Simulation $\rightarrow$ Frontend Architecture $\rightarrow$ Integration & Verification).
+- **Phase 1 Deep Dive Completed**: Conducted file-by-file inspection and detailed walkthrough of `data/` and `docs/` (`equipment_master.csv`, `tag_mapping_registry.csv`, `process_flow_timeseries.csv`, `machine_health_timeseries.csv`, `maintenance_history.csv`, and `mqtt_topic_tree_and_registry_guide.md`), explaining multi-clock domain architecture, SCADA tag mapping, process streams, and maintenance work orders.
+- **Dataset Cleanup & Work Order Reference Guide**:
+  1. Kept `RecordNo` index column intact across `data/process_flow_timeseries.csv` and `data/machine_health_timeseries.csv` for tracking sequential row numbers (`1..2880` and `1..43200`).
+  2. Deleted legacy unaligned v1 dataset `data/Dynamic Results.CSV` and updated backend `manager.py`, `schemas.py`, `assets.json` references to use the v3 dual-stream process/health dataset.
+  3. Created [`docs/work_order_types_guide.md`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/docs/work_order_types_guide.md) detailing exact causes, triggers, and plant examples for work order codes (`CM-01` to `CM-03`, `PM-01` to `PM-05`, `INSP-01` to `INSP-02`).
+- **Phase 2 Deep Dive Completed**: Inspected and documented backend core infrastructure (`config.py`, `interfaces.py`, `exceptions.py`, `utils.py`) and concrete data provider (`csv_provider.py`), explaining environment configuration, Pydantic settings, `BaseDataProvider` abstract contracts, custom exception handling, numeric parsing helpers, and `pd.merge_asof` dual-stream temporal joining.
+- **Phase 3 Deep Dive Completed**: Inspected and documented backend Domain-Driven Design modules across `backend/app/domains/` (`assets`, `telemetry`, `knowledge_graph`, and `simulation`), explaining asset topology lookup, live MQTT telemetry buffering, dynamic derived engineering calculations, in-memory graph construction, and time-series stream replay state machine.
+- **Phase 4 Deep Dive Completed**: Inspected and documented backend API layer across `backend/app/api/` (`dependencies.py`, `router.py`, `v1/*`) and `main.py`, explaining FastAPI lifespan setup, singleton dependency injection, CORS middleware, and domain REST endpoints (`/api/v1/assets`, `/telemetry`, `/graph`, `/maintenance`, `/simulation`).
+- **Phase 5 Deep Dive Completed**: Inspected and documented React 19 + Vite frontend architecture across `frontend/src/` (`App.jsx`, `Flowsheet.jsx`, `KnowledgeGraphPage.jsx`, `MaintenancePage.jsx`, `SimulationContext.jsx`, `simulationApi.js`), explaining live telemetry polling, stream-specific color lighting, SCADA tag nodes, and KPI unit badges.
+- **Phase 6 Deep Dive Completed**: Inspected and documented infrastructure & system execution files (`docker-compose.yml`, `mosquitto.conf`, `run_system.sh`, `AGENTS.md`), explaining container orchestration, MQTT broker configuration, launcher script automation, and system verification routines.
+- **Graph RAG Architectural Consultation & Guide Creation**: Conducted architectural design breakdown for integrating Graph Retrieval-Augmented Generation (Graph RAG) into the Phosphates Grinding Circuit Digital Twin. Detailed AI-driven sub-graph retrieval, Cypher/Python query generation, causal multi-hop reasoning over industrial topology + live SCADA telemetry, and step-by-step implementation blueprint. Created comprehensive guide in [`docs/graph_rag_architecture_guide.md`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/docs/graph_rag_architecture_guide.md).
+- **Industrial Graph RAG Engine & Frontend AI Copilot Integration**:
+  1. Configured `GEMINI_API_KEY` in `backend/.env` and `app/core/config.py`.
+  2. Implemented `GraphRAGService` in [`backend/app/domains/knowledge_graph/rag_service.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/domains/knowledge_graph/rag_service.py) with sub-graph topology extraction, live SCADA telemetry & derived mass-balance KPI injection, maintenance log correlation, Google Gemini API synthesis, and deterministic local industrial fallback engine.
+  3. Added REST endpoints `POST /api/v1/rag/query` and `GET /api/v1/rag/sample-questions` in [`backend/app/api/v1/rag.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/api/v1/rag.py) and registered routes in [`backend/app/api/router.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/api/router.py).
+  4. Built interactive React component [`GraphRagDrawer.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/components/GraphRagDrawer.jsx) with AI Copilot trigger in [`App.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/App.jsx) header.
+  5. Added unit test suite [`backend/tests/test_rag_service.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/tests/test_rag_service.py) (8/8 tests passed) and verified clean production build via `npm --prefix frontend run build`.
+- **Floating Glassmorphism AI Copilot & Right-Side Icon Trigger**:
+  1. Updated [`GraphRagDrawer.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/components/GraphRagDrawer.jsx) into a fully draggable, translucent floating modal with header drag handle (`GripHorizontal`), minimize-to-bubble button, and border resizing.
+  2. Removed AI Copilot button from top navbar in [`App.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/App.jsx) and placed a floating circular icon button (`48px`) without text name on the bottom right.
+- **Model Selection & Direct Answer Quoting**:
+  1. Configured [`rag_service.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/domains/knowledge_graph/rag_service.py) with Gemma 4 26B (`gemma-4-26b-a4b-it`) and multi-model HTTP 429 failover chain.
+  2. Implemented regex quote extraction filter to return 100% clean, 1-sentence answers for direct telemetry queries without chain-of-thought scratchpad echoes.
+- **Pump Box Maintenance Record CSV Fix (`WO-2026-0205`)**:
+  - Fixed unquoted description string in [`data/maintenance_history.csv`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/data/maintenance_history.csv) for work order `WO-2026-0205` (`"De-sludged sump basin, inspected elastomer lining for erosion, and calibrated level sensor."`).
+  - Corrected column shifting where cost parsed as `$NaN` and downtime as missing. Re-verified via backend API: `cost_usd` is `$3,100`, `downtime_hours` is `6.0` hours, `technician` is `"David Thorne (Mechanical Specialist)"`, and `status` is `"Completed"`. All 8 backend unit tests passed.
+- **Git Push & Repository Synchronization**:
+  - Added `.env`, `*.env`, and LibreOffice `.~lock.*#` patterns to `.gitignore` to protect API secrets.
+  - Created `backend/.env.example` template configuration.
+  - Verified backend unit tests (8/8 passed) and production frontend build (`npm run build`).
+  - Staged, committed, and pushed all updated code, datasets, guides, and Industrial Graph RAG engine features to GitHub `origin/master`.
 
 
 

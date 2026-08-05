@@ -34,19 +34,44 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Pre-flight cleanup of lingering background processes & Docker containers
+echo -e "${YELLOW}Cleaning up any stale background processes & containers on ports 8000, 5173, 1883...${NC}"
+docker stop digital_twin_backend digital_twin_frontend digital_twin_mqtt_publisher digital_twin_mosquitto_local 2>/dev/null || true
+docker ps -q --filter "publish=8000" | xargs -r docker stop 2>/dev/null || true
+docker ps -q --filter "publish=5173" | xargs -r docker stop 2>/dev/null || true
+docker ps -q --filter "publish=1883" | xargs -r docker stop 2>/dev/null || true
+
+lsof -ti:8000 | xargs -r kill -9 2>/dev/null || true
+lsof -ti:5173 | xargs -r kill -9 2>/dev/null || true
+lsof -ti:5174 | xargs -r kill -9 2>/dev/null || true
+fuser -k -9 8000/tcp 2>/dev/null || true
+fuser -k -9 5173/tcp 2>/dev/null || true
+fuser -k -9 5174/tcp 2>/dev/null || true
+pkill -9 -f "uvicorn" 2>/dev/null || true
+pkill -9 -f "vite" 2>/dev/null || true
+pkill -9 -f "app.domains.simulation.publisher" 2>/dev/null || true
+sleep 1
+
 # 1. Start Mosquitto MQTT Broker
 echo -e "${GREEN}[1/4] Starting Mosquitto MQTT Broker on port 1883...${NC}"
-docker stop digital_twin_mosquitto_local 2>/dev/null || true
-docker run --rm -d --name digital_twin_mosquitto_local \
+docker stop digital_twin_mosquitto digital_twin_mosquitto_local 2>/dev/null || true
+docker rm digital_twin_mosquitto digital_twin_mosquitto_local 2>/dev/null || true
+docker ps -q --filter "publish=1883" | xargs -r docker stop 2>/dev/null || true
+
+if docker run --rm -d --name digital_twin_mosquitto \
     -p 1883:1883 \
     -v "$(pwd)/infrastructure/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf" \
-    eclipse-mosquitto:2.0 >/dev/null
+    eclipse-mosquitto:2.0 >/dev/null 2>&1; then
+    echo -e "${GREEN}Mosquitto broker container started on port 1883.${NC}"
+else
+    echo -e "${YELLOW}Port 1883 is already occupied. Reusing active MQTT broker.${NC}"
+fi
 
 sleep 1
 
 # 2. Start FastAPI Backend
 echo -e "${GREEN}[2/4] Starting FastAPI Telemetry Engine on http://localhost:8000 ...${NC}"
-PYTHONPATH=backend .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+PYTHONPATH=backend .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
 
 sleep 2
 

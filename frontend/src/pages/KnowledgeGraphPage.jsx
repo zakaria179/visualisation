@@ -366,7 +366,7 @@ const STATIC_EDGES = [
 ];
 
 /* ─────────────────────────────────────────────
-   BFS SHORTEST PATH ALGORITHM
+   ALL SHORTEST PATHS TRAVERSAL ALGORITHM
    ───────────────────────────────────────────── */
 function bfsShortestPath(edges, fromId, toId) {
   const adj = {};
@@ -377,19 +377,38 @@ function bfsShortestPath(edges, fromId, toId) {
     adj[e.target].push({ node: e.source, edge: e });
   });
 
-  const visited = new Set([fromId]);
+  const distances = { [fromId]: 0 };
   const queue = [[fromId, []]];
+  let shortestLen = Infinity;
+  const allPathEdges = [];
+  const edgeSeen = new Set();
+
   while (queue.length > 0) {
     const [current, pathEdges] = queue.shift();
-    if (current === toId) return pathEdges;
+    if (pathEdges.length > shortestLen) continue;
+
+    if (current === toId) {
+      shortestLen = pathEdges.length;
+      pathEdges.forEach((e) => {
+        const key = `${e.source}->${e.target}`;
+        if (!edgeSeen.has(key)) {
+          edgeSeen.add(key);
+          allPathEdges.push(e);
+        }
+      });
+      continue;
+    }
+
     for (const neighbor of adj[current] || []) {
-      if (!visited.has(neighbor.node)) {
-        visited.add(neighbor.node);
+      const d = pathEdges.length + 1;
+      if (d <= shortestLen && (distances[neighbor.node] === undefined || d <= distances[neighbor.node])) {
+        distances[neighbor.node] = d;
         queue.push([neighbor.node, [...pathEdges, neighbor.edge]]);
       }
     }
   }
-  return null;
+
+  return allPathEdges.length > 0 ? allPathEdges : null;
 }
 
 export default function KnowledgeGraphPage() {
@@ -786,6 +805,45 @@ export default function KnowledgeGraphPage() {
       tracedEdgeSet.add(`${e.target}-${e.source}`);
       tracedNodeSet.add(e.source);
       tracedNodeSet.add(e.target);
+    });
+
+    // Identify primary equipment involved in pathSource/pathTarget or on the traced path
+    const activeEqIds = new Set();
+    tracedNodeSet.forEach((id) => {
+      const n = nodes.find((item) => item.id === id);
+      if (n && n.type === "Equipment") activeEqIds.add(id);
+    });
+
+    edges.forEach((e) => {
+      if (
+        e.type === "telemetry" &&
+        (e.source === pathSource || e.target === pathSource || e.source === pathTarget || e.target === pathTarget)
+      ) {
+        const sNode = nodes.find((item) => item.id === e.source);
+        const tNode = nodes.find((item) => item.id === e.target);
+        if (sNode && sNode.type === "Equipment") activeEqIds.add(e.source);
+        if (tNode && tNode.type === "Equipment") activeEqIds.add(e.target);
+      }
+    });
+
+    edges.forEach((e) => {
+      // Include RISK edges for the active source/target equipment
+      if (e.type === "risk" && (activeEqIds.has(e.source) || activeEqIds.has(e.target))) {
+        tracedEdgeSet.add(`${e.source}-${e.target}`);
+        tracedEdgeSet.add(`${e.target}-${e.source}`);
+        tracedNodeSet.add(e.source);
+        tracedNodeSet.add(e.target);
+      }
+      // Include MONITORS edges if the sensor node is specifically pathSource or pathTarget
+      if (
+        e.type === "telemetry" &&
+        (e.source === pathSource || e.source === pathTarget || e.target === pathSource || e.target === pathTarget)
+      ) {
+        tracedEdgeSet.add(`${e.source}-${e.target}`);
+        tracedEdgeSet.add(`${e.target}-${e.source}`);
+        tracedNodeSet.add(e.source);
+        tracedNodeSet.add(e.target);
+      }
     });
   }
 

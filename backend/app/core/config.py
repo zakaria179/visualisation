@@ -20,6 +20,7 @@ class Settings:
     API_V1_STR: str = "/api/v1"
 
     # Environment overrides
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     MQTT_BROKER_HOST: str = os.getenv("MQTT_BROKER_HOST", "localhost")
     MQTT_BROKER_PORT: int = int(os.getenv("MQTT_BROKER_PORT", "1883"))
 

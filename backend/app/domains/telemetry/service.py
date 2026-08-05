@@ -59,7 +59,7 @@ class TelemetryService:
 
         return metrics
 
-    def get_asset_telemetry(self, tag: str, current_record_idx: int) -> Dict[str, Any]:
+    def get_asset_telemetry(self, tag: str, current_record_idx: int = 0) -> Dict[str, Any]:
         meta = self.asset_service.get_asset(tag)
         if not meta:
             return {}

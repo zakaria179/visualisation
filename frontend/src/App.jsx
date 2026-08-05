@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { Menu, Activity, Radio } from "lucide-react";
+import { Menu, Activity, Radio, Bot, Sparkles } from "lucide-react";
 import Flowsheet from "./pages/Flowsheet";
 import MaintenancePage from "./pages/MaintenancePage";
 import KnowledgeGraphPage from "./pages/KnowledgeGraphPage";
 import NavigationSidebar from "./components/NavigationSidebar";
+import GraphRagDrawer from "./components/GraphRagDrawer";
 import {
   getSimulationStatus,
   startSimulation,
@@ -238,6 +239,7 @@ export default function App() {
     }
   }, [activeTab]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isRagOpen, setIsRagOpen] = useState(false);
   const [asset, setAsset] = useState(null);
   const [selectedTag, setSelectedTag] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -407,24 +409,26 @@ export default function App() {
           </h1>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.45rem",
-            fontSize: "0.72rem",
-            color: "#94a3b8",
-            background: "#162032",
-            border: "1px solid #1e293b",
-            padding: "0.25rem 0.65rem",
-            borderRadius: "12px",
-            userSelect: "none",
-          }}
-        >
-          <span className="pulse-dot"></span>
-          <span style={{ fontWeight: "700", color: "#f8fafc", letterSpacing: "0.5px" }}>
-            SCADA ONLINE
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+              fontSize: "0.72rem",
+              color: "#94a3b8",
+              background: "#162032",
+              border: "1px solid #1e293b",
+              padding: "0.25rem 0.65rem",
+              borderRadius: "12px",
+              userSelect: "none",
+            }}
+          >
+            <span className="pulse-dot"></span>
+            <span style={{ fontWeight: "700", color: "#f8fafc", letterSpacing: "0.5px" }}>
+              SCADA ONLINE
+            </span>
+          </div>
         </div>
       </header>
 
@@ -666,6 +670,37 @@ export default function App() {
           <KnowledgeGraphPage />
         </main>
       )}
+
+      {/* Floating AI Copilot Trigger Icon on the Right (Strictly Icon Only) */}
+      {!isRagOpen && (
+        <button
+          onClick={() => setIsRagOpen(true)}
+          style={{
+            position: "fixed",
+            bottom: "28px",
+            right: "24px",
+            zIndex: 999,
+            width: "48px",
+            height: "48px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #00f0ff 0%, #3b82f6 100%)",
+            border: "1px solid rgba(0, 240, 255, 0.6)",
+            boxShadow: "0 0 20px rgba(0, 240, 255, 0.5), 0 8px 25px rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+          title="Open Graph RAG AI Copilot"
+          onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.1)")}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1.0)")}
+        >
+          <Bot size={24} color="#0f172a" />
+        </button>
+      )}
+
+      <GraphRagDrawer isOpen={isRagOpen} onClose={() => setIsRagOpen(false)} />
     </div>
   );
 }

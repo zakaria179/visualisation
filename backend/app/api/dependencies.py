@@ -8,6 +8,7 @@ from app.domains.telemetry.subscriber import MQTTSubscriberService
 from app.domains.telemetry.service import TelemetryService
 from app.domains.simulation.manager import SimulationManager
 from app.domains.knowledge_graph.service import KnowledgeGraphService
+from app.domains.knowledge_graph.rag_service import GraphRAGService
 from app.core.config import settings
 
 # Global singletons
@@ -17,9 +18,10 @@ _mqtt_service: MQTTSubscriberService = None
 _telemetry_service: TelemetryService = None
 _sim_manager: SimulationManager = None
 _kg_service: KnowledgeGraphService = None
+_rag_service: GraphRAGService = None
 
 def init_app_services():
-    global _csv_provider, _asset_service, _mqtt_service, _telemetry_service, _sim_manager, _kg_service
+    global _csv_provider, _asset_service, _mqtt_service, _telemetry_service, _sim_manager, _kg_service, _rag_service
 
     _csv_provider = CSVDataProvider(settings.DATA_DIR)
     _asset_service = AssetService(
@@ -33,6 +35,7 @@ def init_app_services():
 
     _telemetry_service = TelemetryService(_asset_service, _csv_provider, _mqtt_service)
     _sim_manager = SimulationManager(_csv_provider, mqtt_service=_mqtt_service)
+    _rag_service = GraphRAGService(_kg_service, _telemetry_service, _asset_service)
 
 def shutdown_app_services():
     global _mqtt_service, _kg_service
@@ -58,3 +61,6 @@ def get_sim_manager() -> SimulationManager:
 
 def get_kg_service() -> KnowledgeGraphService:
     return _kg_service
+
+def get_rag_service() -> GraphRAGService:
+    return _rag_service

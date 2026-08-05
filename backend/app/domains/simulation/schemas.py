@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 class SimulationStatusResponse(BaseModel):
     simulation_name: str = "SysCAD Dynamic Phosphates Grinding Circuit"
-    csv_file: str = "Dynamic Results.CSV"
+    csv_file: str = "process_flow_timeseries.csv & machine_health_timeseries.csv"
     state: str
     current_record: int
     total_records: int

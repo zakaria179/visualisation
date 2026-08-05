@@ -23,6 +23,8 @@ services:
     container_name: digital_twin_backend
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend/.env
     environment:
       - MQTT_BROKER_HOST=mosquitto
       - MQTT_BROKER_PORT=1883

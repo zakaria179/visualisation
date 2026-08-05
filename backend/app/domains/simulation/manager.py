@@ -165,7 +165,7 @@ class SimulationManager:
 
         return {
             "simulation_name": "SysCAD Dynamic Phosphates Grinding Circuit",
-            "csv_file": "Dynamic Results.CSV",
+            "csv_file": "process_flow_timeseries.csv & machine_health_timeseries.csv",
             "state": self.state.value,
             "current_record": current_record_num,
             "total_records": total,

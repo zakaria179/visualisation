@@ -80,9 +80,7 @@ class CSVDataProvider(BaseDataProvider):
         elif health_path.exists():
             self.df = pd.read_csv(health_path)
         else:
-            legacy_file = data_dir / "Dynamic Results.CSV"
-            if legacy_file.exists():
-                self._load_single_file(legacy_file)
+            logger.warning("No time series datasets found in data directory!")
 
     def _load_single_file(self, file_path: Path):
         """Load single legacy CSV file."""

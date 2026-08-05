@@ -139,7 +139,6 @@
     "destination": "N/A",
     "csv_columns": [
       "RecordNo",
-      "Time",
       "ElapsedHrs",
       "Ambient_Temp_C",
       "Circulating_Load_Ratio_pct",
