@@ -28,6 +28,11 @@ class Settings:
     NEO4J_USER: str = os.getenv("NEO4J_USER", "neo4j")
     NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD", "password123")
 
+    # JWT Authentication
+    JWT_SECRET: str = os.getenv("JWT_SECRET", "industrial-digital-twin-secret-key-pfa-2026")
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
+
     DATA_DIR: Path = DATA_DIR
     ASSETS_PATH: Path = BASE_DIR / "core" / "assets.json"
     EQUIPMENT_MASTER_PATH: Path = DATA_DIR / "equipment_master.csv"

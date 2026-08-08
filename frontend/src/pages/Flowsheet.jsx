@@ -28,7 +28,7 @@ const LAYOUT = {
     P_001: {
       tag: "P_001",
       name: "Feed Slurry Line",
-      color: "#06b6d4",
+      color: "#475569",
       points: [
         [108, 310],
         [195, 310],
@@ -40,7 +40,7 @@ const LAYOUT = {
     P_101: {
       tag: "P_101",
       name: "Process Water Line",
-      color: "#3b82f6",
+      color: "#475569",
       points: [
         [108, 450],
         [195, 450],
@@ -52,7 +52,7 @@ const LAYOUT = {
     P_002: {
       tag: "P_002",
       name: "Pump Suction Line",
-      color: "#0284c7",
+      color: "#475569",
       points: [
         [260, 430],
         [260, 475],
@@ -65,7 +65,7 @@ const LAYOUT = {
     P_003: {
       tag: "P_003",
       name: "Cyclone Riser Feed",
-      color: "#0284c7",
+      color: "#475569",
       points: [
         [500, 404],
         [500, 108],
@@ -76,7 +76,7 @@ const LAYOUT = {
     P_006: {
       tag: "P_006",
       name: "Overflow Discharge",
-      color: "#10b981",
+      color: "#475569",
       points: [
         [688, 86],
         [1012, 86],
@@ -86,7 +86,7 @@ const LAYOUT = {
     P_004: {
       tag: "P_004",
       name: "Underflow Line",
-      color: "#f97316",
+      color: "#475569",
       points: [
         [640, 186],
         [640, 380],
@@ -97,7 +97,7 @@ const LAYOUT = {
     P_005: {
       tag: "P_005",
       name: "Mill Return Recycle",
-      color: "#ec4899",
+      color: "#475569",
       points: [
         [977, 380],
         [1060, 380],
@@ -111,16 +111,16 @@ const LAYOUT = {
   },
 };
 
-// Styling System Tokens
-const SELECTION_CYAN = "#00f0ff";
+// Styling System Tokens (ISA-101 High Performance HMI Restraint)
+const SELECTION_CYAN = "#cbd5e1";
 const BASE_STROKE = "#475569";
 const BASE_FILL = "#0f172a";
-const CARD_BG = "#1e293b";
+const CARD_BG = "#162032";
 const TEXT_PRIMARY = "#f8fafc";
 
-// High-Vis Equipment Selection Glow Filters
-const HOVER_GLOW_FILTER = "drop-shadow(0 0 10px rgba(0, 240, 255, 0.75))";
-const SELECTED_GLOW_FILTER = "drop-shadow(0 0 16px rgba(0, 240, 255, 0.95)) drop-shadow(0 0 6px #00f0ff)";
+// ISA-101 Low-Contrast Selection Filters
+const HOVER_GLOW_FILTER = "drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6))";
+const SELECTED_GLOW_FILTER = "drop-shadow(0 0 8px rgba(203, 213, 225, 0.4))";
 
 /**
  * Standardized SVG Smooth Rounded Corner Path Generator
@@ -205,11 +205,12 @@ function getSinglePipeArrow(tag, points) {
 const PipeLine = ({ tag, points, color, isRunning, isStepActive, selected, onSelect }) => {
   const [isHovered, setIsHovered] = useState(false);
   const isSelected = selected === tag;
-  const pipeColor = color || "#38bdf8";
 
   const pathD = buildRoundedPath(points, 12);
   const arrow = getSinglePipeArrow(tag, points);
-  const active = isHovered || (isRunning && isStepActive) || isSelected;
+
+  // Pipe turns white (#ffffff) when clicked; gray (#475569) when normal; light slate (#94a3b8) on hover
+  const strokeColor = isSelected ? "#ffffff" : isHovered ? "#94a3b8" : (color || "#475569");
 
   return (
     <g
@@ -218,60 +219,48 @@ const PipeLine = ({ tag, points, color, isRunning, isStepActive, selected, onSel
       onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
         e.stopPropagation();
-        if (onSelect) onSelect(tag);
+        if (onSelect) onSelect(selected === tag ? null : tag);
       }}
       style={{ cursor: "pointer" }}
     >
-      <path d={pathD} fill="none" stroke="transparent" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Invisible thick hit-area for easy clicking */}
+      <path d={pathD} fill="none" stroke="transparent" strokeWidth="22" strokeLinecap="round" strokeLinejoin="round" />
 
-      {active && (
-        <path
-          d={pathD}
-          fill="none"
-          stroke={pipeColor}
-          strokeWidth={isSelected ? "8" : (isRunning && isStepActive) ? "7" : "6"}
-          strokeOpacity={isSelected ? "0.55" : (isRunning && isStepActive) ? "0.45" : "0.3"}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ filter: `drop-shadow(0 0 10px ${pipeColor})` }}
-        />
-      )}
-
+      {/* Main Pipe Line (Clean single 3.5px line - turns pure white on click, no thick contour) */}
       <path
         d={pathD}
         fill="none"
-        stroke={pipeColor}
-        strokeWidth={isSelected ? 4.5 : (isRunning && isStepActive) ? 4.0 : isHovered ? 4.0 : 3.5}
+        stroke={strokeColor}
+        strokeWidth="3.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        style={{ transition: "stroke 0.25s, stroke-width 0.25s" }}
+        style={{ transition: "stroke 0.2s ease" }}
       />
 
+      {/* Animated Dash Stream Layer when simulation is running */}
       {isRunning && isStepActive && (
         <path
           d={pathD}
           fill="none"
           stroke="#ffffff"
           strokeWidth="3.5"
-          strokeDasharray="10 6"
+          strokeDasharray="8 6"
           strokeLinecap="round"
           strokeLinejoin="round"
           style={{
-            animation: "flowDash 0.65s linear infinite",
-            filter: `drop-shadow(0 0 8px ${pipeColor}) drop-shadow(0 0 4px #ffffff)`,
+            animation: "flowDash 0.8s linear infinite",
+            strokeOpacity: isSelected ? 0.9 : 0.6,
           }}
         />
       )}
 
+      {/* Directional Flow Arrow (Restored) */}
       {arrow && (
         <polygon
           points="-6,-3.5 6,0 -6,3.5"
-          fill={pipeColor}
+          fill={strokeColor}
           transform={`translate(${arrow.x}, ${arrow.y}) rotate(${arrow.angle})`}
-          style={{
-            filter: active ? `drop-shadow(0 0 8px ${pipeColor})` : "none",
-            transition: "fill 0.25s ease, transform 0.25s ease",
-          }}
+          style={{ transition: "fill 0.2s ease" }}
         />
       )}
     </g>
@@ -284,14 +273,14 @@ const PipeLine = ({ tag, points, color, isRunning, isStepActive, selected, onSel
 const PipeLabel = ({ tag, labelPos, color, selected, onSelect }) => {
   if (!labelPos) return null;
   const isSelected = selected === tag;
-  const badgeColor = color || "#38bdf8";
+  const badgeColor = color || "#475569";
 
   return (
     <g
       transform={`translate(${labelPos.x}, ${labelPos.y})`}
       onClick={(e) => {
         e.stopPropagation();
-        if (onSelect) onSelect(tag);
+        if (onSelect) onSelect(selected === tag ? null : tag);
       }}
       style={{ cursor: "pointer" }}
     >
@@ -301,19 +290,16 @@ const PipeLabel = ({ tag, labelPos, color, selected, onSelect }) => {
         width="50"
         height="20"
         rx="4"
-        fill={isSelected ? "#1e293b" : CARD_BG}
-        stroke={badgeColor}
-        strokeWidth={isSelected ? "2" : "1.5"}
-        style={{
-          transition: "all 0.25s ease",
-          filter: isSelected ? `drop-shadow(0 0 10px ${badgeColor})` : "none",
-        }}
+        fill={isSelected ? "#162032" : CARD_BG}
+        stroke={isSelected ? "#ffffff" : badgeColor}
+        strokeWidth="1.5"
+        style={{ transition: "stroke 0.2s ease, fill 0.2s ease" }}
       />
       <text
         x="0"
         y="3.5"
         textAnchor="middle"
-        fill={isSelected ? badgeColor : TEXT_PRIMARY}
+        fill={isSelected ? "#ffffff" : TEXT_PRIMARY}
         fontSize="11"
         fontWeight="800"
         fontFamily="Inter, system-ui, sans-serif"
@@ -400,7 +386,7 @@ const PumpBox = ({ tag, x, y, selected, onSelect, isRunning, isStepActive }) => 
       transform={`translate(${x}, ${y})`}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(tag);
+        onSelect(selected === tag ? null : tag);
       }}
       className="flowsheet-equipment"
       style={{ cursor: "pointer" }}
@@ -464,7 +450,7 @@ const Pump = ({ tag, x, y, selected, onSelect, isRunning, isStepActive }) => {
       transform={`translate(${x}, ${y})`}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(tag);
+        onSelect(selected === tag ? null : tag);
       }}
       className="flowsheet-equipment"
       style={{ cursor: "pointer" }}
@@ -519,7 +505,7 @@ const Hydrocyclone = ({ tag, x, y, selected, onSelect, isRunning, isStepActive }
         <g
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(subTag);
+            onSelect(selected === subTag ? null : subTag);
           }}
           style={{ cursor: "pointer" }}
         >
@@ -571,7 +557,7 @@ const Hydrocyclone = ({ tag, x, y, selected, onSelect, isRunning, isStepActive }
       transform={`translate(${x}, ${y})`}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(tag);
+        onSelect(selected === tag ? null : tag);
       }}
       className="flowsheet-equipment"
       style={{ cursor: "pointer" }}
@@ -607,7 +593,7 @@ const BallMill = ({ tag, x, y, selected, onSelect, isRunning, isStepActive }) =>
       transform={`translate(${x}, ${y})`}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(tag);
+        onSelect(selected === tag ? null : tag);
       }}
       className="flowsheet-equipment"
       style={{ cursor: "pointer" }}
@@ -670,7 +656,7 @@ const StreamNode = ({ label, tag, x, y, color, type = "input", selected, onSelec
       transform={`translate(${x}, ${y})`}
       onClick={(e) => {
         e.stopPropagation();
-        if (onSelect) onSelect(tag);
+        if (onSelect) onSelect(selected === tag ? null : tag);
       }}
       style={{ cursor: "pointer" }}
     >
@@ -773,7 +759,6 @@ export default function Flowsheet({
 
   return (
     <div
-      onClick={() => onSelect && onSelect(null)}
       style={{
         position: "relative",
         width: "100%",
@@ -812,7 +797,7 @@ export default function Flowsheet({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem", flexShrink: 0, zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
           <span style={{ color: "#00f0ff", fontWeight: "700", fontSize: "0.8rem", letterSpacing: "1px", textTransform: "uppercase" }}>
-            PROCESS SCHEMATIC | GRINDING CIRCUIT
+            Phosphate Grinding Circuit
           </span>
           {!hideControls && isRunning && (
             <span
@@ -1040,7 +1025,11 @@ export default function Flowsheet({
       <svg
         viewBox={`0 0 ${LAYOUT.canvas.width} ${LAYOUT.canvas.height}`}
         preserveAspectRatio="xMidYMid meet"
-        onClick={() => onSelect && onSelect(null)}
+        onClick={(e) => {
+          if (e.target.tagName === "svg" || e.target.id === "cadGrid") {
+            if (onSelect) onSelect(null);
+          }
+        }}
         style={{ width: "100%", height: "100%", flex: 1, display: "block" }}
       >
         <style>{`
@@ -1103,7 +1092,7 @@ export default function Flowsheet({
           tag={LAYOUT.nodes.Slurry_In.tag}
           x={LAYOUT.nodes.Slurry_In.x}
           y={LAYOUT.nodes.Slurry_In.y}
-          color="#06b6d4"
+          color="#10b981"
           type="input"
           selected={selected}
           onSelect={onSelect}
@@ -1185,8 +1174,6 @@ export default function Flowsheet({
           tag="P_006"
           x={840}
           y={52}
-          accentColor="#10b981"
-          glowColor="#10b981"
           selected={selected}
           onSelect={onSelect}
         />
@@ -1195,8 +1182,6 @@ export default function Flowsheet({
           tag="P_004"
           x={640}
           y={236}
-          accentColor="#f97316"
-          glowColor="#f97316"
           selected={selected}
           onSelect={onSelect}
         />
@@ -1206,11 +1191,11 @@ export default function Flowsheet({
 }
 
 /**
- * Visual High-Tech Stream Classifier Badge for Hydrocyclone OVERFLOW & UNDERFLOW streams.
+ * Visual Stream Classifier Badge for Hydrocyclone OVERFLOW & UNDERFLOW streams.
+ * Uses exact same visual colors and styling as machine titles (EquipmentTitle).
  */
-function StreamClassifierBadge({ label, tag, x, y, accentColor, glowColor, selected, onSelect }) {
+function StreamClassifierBadge({ label, tag, x, y, selected, onSelect }) {
   const isSelected = selected === tag;
-  const badgeColor = accentColor || "#10b981";
 
   return (
     <g
@@ -1221,46 +1206,29 @@ function StreamClassifierBadge({ label, tag, x, y, accentColor, glowColor, selec
       }}
       style={{ cursor: "pointer" }}
     >
-      <g
-        style={{
-          filter: isSelected
-            ? `drop-shadow(0 0 16px ${badgeColor}) drop-shadow(0 0 6px ${badgeColor})`
-            : `drop-shadow(0 0 10px ${badgeColor})`,
-          transition: "all 0.25s ease",
-        }}
+      <rect
+        x="-52"
+        y="-10"
+        width="104"
+        height="20"
+        rx="5"
+        fill={isSelected ? "#1e293b" : "#0f172a"}
+        stroke={isSelected ? "#ffffff" : "#334155"}
+        strokeWidth="1.5"
+        style={{ transition: "stroke 0.2s ease, fill 0.2s ease" }}
+      />
+      <text
+        x="0"
+        y="3.5"
+        textAnchor="middle"
+        fill={isSelected ? "#ffffff" : "#94a3b8"}
+        fontSize="10"
+        fontWeight="800"
+        fontFamily="Inter, system-ui, sans-serif"
+        letterSpacing="0.8px"
       >
-        {/* Circumference lit with stream accent color; interior fill remains dark/unlit */}
-        <rect
-          x="-52"
-          y="-13"
-          width="104"
-          height="26"
-          rx="6"
-          fill="#0f172a"
-          stroke={badgeColor}
-          strokeWidth={isSelected ? "2.5" : "2.0"}
-          style={{ transition: "all 0.25s ease" }}
-        />
-        <circle
-          cx="-40"
-          cy="0"
-          r="3"
-          fill={badgeColor}
-          style={{ transition: "all 0.25s ease" }}
-        />
-        <text
-          x="4"
-          y="3.5"
-          textAnchor="middle"
-          fill={badgeColor}
-          fontSize="10"
-          fontWeight="900"
-          letterSpacing="0.8px"
-          fontFamily="Inter, system-ui, sans-serif"
-        >
-          {label}
-        </text>
-      </g>
+        {label}
+      </text>
     </g>
   );
 }

@@ -9,7 +9,7 @@ function renderInlineFormatting(text) {
   return parts.map((part, idx) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={idx} style={{ color: "#00f0ff", fontWeight: "700" }}>
+        <strong key={idx} style={{ color: "#f8fafc", fontWeight: "700" }}>
           {part.slice(2, -2)}
         </strong>
       );
@@ -19,9 +19,9 @@ function renderInlineFormatting(text) {
         <code
           key={idx}
           style={{
-            background: "#090d16",
-            border: "1px solid #1e293b",
-            color: "#38bdf8",
+            background: "#0e1420",
+            border: "1px solid #2a384e",
+            color: "#cbd5e1",
             padding: "0.1rem 0.35rem",
             borderRadius: "4px",
             fontSize: "0.74rem",

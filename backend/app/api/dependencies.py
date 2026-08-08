@@ -1,5 +1,5 @@
-from typing import Generator
-from fastapi import Request
+from fastapi import Request, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 
 from app.providers.csv_provider import CSVDataProvider
 from app.domains.assets.service import AssetService
@@ -9,6 +9,9 @@ from app.domains.telemetry.service import TelemetryService
 from app.domains.simulation.manager import SimulationManager
 from app.domains.knowledge_graph.service import KnowledgeGraphService
 from app.domains.knowledge_graph.rag_service import GraphRAGService
+from app.domains.auth.service import AuthService
+from app.domains.auth.schemas import UserResponse
+from app.core.security import decode_access_token
 from app.core.config import settings
 
 # Global singletons
@@ -19,9 +22,12 @@ _telemetry_service: TelemetryService = None
 _sim_manager: SimulationManager = None
 _kg_service: KnowledgeGraphService = None
 _rag_service: GraphRAGService = None
+_auth_service: AuthService = None
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=True)
 
 def init_app_services():
-    global _csv_provider, _asset_service, _mqtt_service, _telemetry_service, _sim_manager, _kg_service, _rag_service
+    global _csv_provider, _asset_service, _mqtt_service, _telemetry_service, _sim_manager, _kg_service, _rag_service, _auth_service
 
     _csv_provider = CSVDataProvider(settings.DATA_DIR)
     _asset_service = AssetService(
@@ -36,6 +42,7 @@ def init_app_services():
     _telemetry_service = TelemetryService(_asset_service, _csv_provider, _mqtt_service)
     _sim_manager = SimulationManager(_csv_provider, mqtt_service=_mqtt_service)
     _rag_service = GraphRAGService(_kg_service, _telemetry_service, _asset_service)
+    _auth_service = AuthService()
 
 def shutdown_app_services():
     global _mqtt_service, _kg_service
@@ -64,3 +71,31 @@ def get_kg_service() -> KnowledgeGraphService:
 
 def get_rag_service() -> GraphRAGService:
     return _rag_service
+
+def get_auth_service() -> AuthService:
+    global _auth_service
+    if _auth_service is None:
+        _auth_service = AuthService()
+    return _auth_service
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    auth_service: AuthService = Depends(get_auth_service)
+) -> UserResponse:
+    """Validate JWT bearer token and return authenticated user model."""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials or token expired",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    payload = decode_access_token(token)
+    if not payload:
+        raise credentials_exception
+    username: str = payload.get("sub")
+    if not username:
+        raise credentials_exception
+    user = auth_service.get_user_by_username(username)
+    if not user:
+        raise credentials_exception
+    return user
+

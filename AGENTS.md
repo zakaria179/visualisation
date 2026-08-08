@@ -141,6 +141,76 @@ digital-twin-dashboard/
   - Created `backend/.env.example` template configuration.
   - Verified backend unit tests (8/8 passed) and production frontend build (`npm run build`).
   - Staged, committed, and pushed all updated code, datasets, guides, and Industrial Graph RAG engine features to GitHub `origin/master`.
+- **Phase 1 — Platform Authentication & Session Gating Completed**:
+  1. **Co-Branded Assets**: Imported ENSA Berrechid (`logo_ensa.png`) and JESA / OCP Group (`logo_jesa.png`) logos into `frontend/src/assets/`.
+  2. **Backend Security Infrastructure**: Created [`backend/app/core/security.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/core/security.py) using direct `bcrypt` password hashing and JWT token generation/decoding (`HS256`, 8-hour expiration).
+  3. **Auth Service & Schemas**: Implemented [`backend/app/domains/auth/schemas.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/domains/auth/schemas.py) and [`backend/app/domains/auth/service.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/domains/auth/service.py) with pre-configured industrial demo roles (`operator`, `engineer`, `admin`).
+  4. **FastAPI Route Protection**: Implemented `get_current_user` in [`backend/app/api/dependencies.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/api/dependencies.py) and endpoints `/api/v1/auth/login` and `/api/v1/auth/me` in [`backend/app/api/v1/auth.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/api/v1/auth.py).
+  5. **Frontend Auth Context & Login Page**: Built [`frontend/src/context/AuthContext.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/context/AuthContext.jsx), co-branded glassmorphism split-screen login page [`frontend/src/pages/LoginPage.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/LoginPage.jsx) with quick role presets, and [`frontend/src/components/ProtectedRoute.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/components/ProtectedRoute.jsx) route guard.
+  6. **API Header Attachment**: Updated [`frontend/src/api/simulationApi.js`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/api/simulationApi.js) to attach `Authorization: Bearer <token>` on requests.
+  7. **Header Integration**: Updated [`frontend/src/App.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/App.jsx) top navbar to show the authenticated user badge and a red Logout button.
+  8. **Verification**: 13/13 backend unit tests passed (`test_auth.py`, `test_rag_service.py`, `test_simulation.py`) and frontend production build compiled cleanly (`npm run build`).
+- **JESA Logo Background Removal & Quick Select Authentication Fix**:
+  1. Processed both [`frontend/src/assets/logo_jesa.png`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/assets/logo_jesa.png) and [`frontend/src/assets/logo_ensa.png`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/assets/logo_ensa.png) to convert white background pixels into alpha channels, producing clean transparent vector-like PNGs cropped to exact bounding boxes (`1846x433` and `292x80`).
+  2. Fixed `"Failed to fetch"` error on login by updating endpoint routing in [`AuthContext.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/context/AuthContext.jsx) to try `/api/v1/auth/login` and `/auth/login`, and adding an offline demo authentication fallback for quick-select demo roles (`operator`, `engineer`, `admin`) when the backend service is offline.
+  3. Made quick select buttons in [`LoginPage.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/LoginPage.jsx) trigger immediate authentication upon click.
+  4. Verified 13/13 backend unit tests pass and frontend build succeeds cleanly in 267ms.
+- **Co-Branding 50/50 Equal Logo Layout**:
+  - Updated [`LoginPage.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/LoginPage.jsx) header layout to wrap **ENSA Berrechid** and **JESA / OCP Group** logos in symmetrical `flex: 1` slot containers.
+  - Both logos now occupy exactly **50% / 50% equal width** inside the pill header with balanced visual boundaries. Verified via clean frontend production build (270ms).
+- **Full Platform ISA-101 Dark Slate Theme Overhaul**:
+  1. **Standardized HMI Design System**: Updated [`index.css`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/styles/index.css) to enforce the official ISA-101 dark slate palette (`#0e1420` canvas, `#161f30` cards, `#2a384e` borders, `#475569` neutral equipment strokes, `#526580` process lines).
+  2. **Complete Component Synchronization**: Applied the ISA-101 theme across all platform components: [`App.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/App.jsx) (header, metric cards, status badges), [`LoginPage.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/LoginPage.jsx) (co-branded authentication card), [`NavigationSidebar.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/components/NavigationSidebar.jsx) (screen hierarchy drawer), [`GraphRagDrawer.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/components/GraphRagDrawer.jsx) (AI Copilot modal), [`Flowsheet.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/Flowsheet.jsx) (P&ID overview), and [`KnowledgeGraphPage.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/KnowledgeGraphPage.jsx) (topology network).
+  3. **Verification**: 13/13 backend unit tests passed and frontend compiled cleanly in 337ms.
+- **Backend Docker Container Dependency Fix & Connection Restoration**:
+  1. **Root Cause Analysis**: Inspected `digital_twin_backend` Docker container logs and identified startup crash: `ModuleNotFoundError: No module named 'bcrypt'`, caused by missing `bcrypt` and `PyJWT` packages in [`backend/requirements.txt`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/requirements.txt) required by [`backend/app/core/security.py`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/app/core/security.py).
+  2. **Requirements Update**: Added `bcrypt==5.0.0` and `PyJWT==2.13.0` to [`backend/requirements.txt`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/backend/requirements.txt).
+  3. **Container Rebuild & Verification**: Rebuilt and restarted the `digital_twin_backend` container via `docker compose up -d --build backend`. Verified API endpoints (`/api/v1/assets/BM_001` and `/api/v1/simulation/status`) return HTTP 200 OK. Ran 13/13 backend unit tests with 100% pass rate.
+- **Complete Removal of Decorative Orange Colors**:
+  1. **Strict ISA-101 Compliance**: Stripped all decorative orange accents (`#f97316`, `#fb923c`) from process flow badges (`StreamClassifierBadge` `UNDERFLOW` in [`Flowsheet.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/Flowsheet.jsx)), Knowledge Graph nodes & side drawers (`WorkOrder` & history in [`KnowledgeGraphPage.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/KnowledgeGraphPage.jsx)), and KPI stat cards in [`MaintenancePage.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/MaintenancePage.jsx).
+  2. **Replacement with Neutral Slate & Standard Priority Colors**: Replaced all instances with neutral slate gray (`#475569`, `#94a3b8`, `#cbd5e1`) and standard ISA-101 amber (`#f59e0b`).
+  3. **Verification**: 13/13 backend unit tests passed and frontend compiled cleanly in 284ms (`npm --prefix frontend run build`).
+- **Restored Directional Arrows & Clean Single White Line Pipe Selection**:
+  1. **Restored Arrows**: Re-enabled `getSinglePipeArrow` rendering on all stream lines with exact directional flow orientation.
+  2. **Clean Single White Selection Line**: Updated `PipeLine` in [`Flowsheet.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/Flowsheet.jsx) so that clicking a pipe turns the line and arrow head to pure `#ffffff` white at the exact same `3.5px` stroke thickness as when gray, eliminating all thick outer contour layers, secondary lines, and drop-shadow glow filters.
+  3. **Verification**: 13/13 backend unit tests passed and frontend compiled cleanly in 409ms (`npm --prefix frontend run build`).
+- **Synchronized OVERFLOW & UNDERFLOW Badges with Machine Title Styling**:
+  1. **Consistent Machine Title Styling**: Updated `StreamClassifierBadge` in [`Flowsheet.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/Flowsheet.jsx) to match `EquipmentTitle` machine name pills 1:1 (`fill="#0f172a"`, `stroke="#334155"`, `strokeWidth="1.5"`, text fill `#94a3b8` in default state; `fill="#1e293b"`, `stroke="#ffffff"`, text fill `#ffffff` when selected).
+  2. **Clean Vector Symbology**: Removed legacy circle dots and drop-shadow glow filters around the stream badges for uniform SCADA design consistency.
+  3. **Verification**: 13/13 backend unit tests passed and frontend compiled cleanly in 328ms (`npm --prefix frontend run build`).- **Flowsheet Selection Intercept & Display Fix**:
+  1. **Removed Root Container Click Interceptor**: Removed `onClick={() => onSelect && onSelect(null)}` from the top root container `<div>` in [`Flowsheet.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/Flowsheet.jsx), which was previously intercepting all equipment, pipe, and control clicks and immediately canceling selections.
+  2. **Scoped SVG Background Unselect**: Updated `<svg>` background click handler so unselection only fires when clicking directly on empty canvas space (`e.target.tagName === 'svg' || e.target.id === 'cadGrid'`).
+  3. **Verification**: 13/13 backend unit tests passed and frontend compiled cleanly in 314ms (`npm --prefix frontend run build`).
+- **Knowledge Graph Auto-Pan/Zoom on Flowsheet Selection & TelemetryPopoutDrawer Position Reset**:
+  1. **KG Auto-Pan/Zoom**: Expanded the `externalSelectedId` `useEffect` in [`KnowledgeGraphPage.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/pages/KnowledgeGraphPage.jsx) to auto-center the KG viewport on the selected node whenever a machine is clicked in the Flowsheet. Uses `SCHEMATIC_POSITIONS` for stable position lookup (no `nodes` in dependency array to avoid infinite re-renders). Maps `CY_001` → `CY_001_B` for both `selectedNodeId` highlight/dim logic and viewport centering. Resets transform to `{ x: 40, y: 20, scale: 0.8 }` on deselect/null.
+  2. **Smooth CSS Transition**: Added `transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)` to the SVG `<g>` element, suppressed during drag and pan for immediate response.
+  3. **TelemetryPopoutDrawer Position Reset**: Added a second `useEffect` in [`TelemetryPopoutDrawer.jsx`](file:///home/zakaria/Documents/ProjetPFA/digital-twin-dashboard/frontend/src/components/TelemetryPopoutDrawer.jsx) that resets `position` to `{ x: null, y: null }` whenever `isOpen` becomes `false`, ensuring stale dragged positions never persist into the next drawer open.
+  4. **Verification**: 13/13 backend unit tests passed and frontend compiled cleanly in 390ms.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

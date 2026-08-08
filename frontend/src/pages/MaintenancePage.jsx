@@ -29,12 +29,12 @@ import { API_BASE as API } from "../config/api.config.js";
 function getCriticalityBadge(criticality) {
   const crit = (criticality || "").toLowerCase();
   if (crit === "critical") {
-    return { bg: "rgba(239, 68, 68, 0.15)", border: "#ef4444", text: "#f87171", label: "CRITICAL" };
+    return { bg: "rgba(239, 68, 68, 0.18)", border: "#ef4444", text: "#ef4444", label: "▲ P4 CRITICAL" };
   }
   if (crit === "high") {
-    return { bg: "rgba(249, 115, 22, 0.15)", border: "#f97316", text: "#fb923c", label: "HIGH" };
+    return { bg: "rgba(245, 158, 11, 0.18)", border: "#f59e0b", text: "#f59e0b", label: "◆ P3 HIGH" };
   }
-  return { bg: "rgba(234, 179, 8, 0.15)", border: "#eab308", text: "#facc15", label: "MEDIUM" };
+  return { bg: "rgba(2, 132, 199, 0.18)", border: "#0284c7", text: "#38bdf8", label: "● P2 MEDIUM" };
 }
 
 function getConditionBadge(status) {
@@ -43,26 +43,26 @@ function getConditionBadge(status) {
     return { bg: "rgba(16, 185, 129, 0.15)", border: "#10b981", text: "#34d399", label: "OPTIMAL" };
   }
   if (s.includes("fair") || s.includes("monitor")) {
-    return { bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b", text: "#fbbf24", label: "ATTENTION" };
+    return { bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b", text: "#fbbf24", label: "◆ ATTENTION" };
   }
-  return { bg: "rgba(239, 68, 68, 0.15)", border: "#ef4444", text: "#f87171", label: "ACTION REQUIRED" };
+  return { bg: "rgba(239, 68, 68, 0.18)", border: "#ef4444", text: "#f87171", label: "▲ ACTION REQUIRED" };
 }
 
 function getMaintenanceTypeBadge(type) {
   const t = (type || "").toLowerCase();
   if (t.includes("overhaul")) {
-    return { bg: "rgba(168, 85, 247, 0.15)", border: "#a855f7", text: "#c084fc" };
+    return { bg: "rgba(168, 85, 247, 0.15)", border: "#a855f7", text: "#c084fc", symbol: "✚" };
   }
   if (t.includes("corrective")) {
-    return { bg: "rgba(239, 68, 68, 0.15)", border: "#ef4444", text: "#f87171" };
+    return { bg: "rgba(239, 68, 68, 0.15)", border: "#ef4444", text: "#f87171", symbol: "▲" };
   }
-  if (t.includes("condition")) {
-    return { bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b", text: "#fbbf24" };
+  if (t.includes("condition") || t.includes("preventive")) {
+    return { bg: "rgba(245, 158, 11, 0.15)", border: "#f59e0b", text: "#fbbf24", symbol: "◆" };
   }
   if (t.includes("inspection")) {
-    return { bg: "rgba(56, 189, 248, 0.15)", border: "#38bdf8", text: "#38bdf8" };
+    return { bg: "rgba(2, 132, 199, 0.15)", border: "#0284c7", text: "#38bdf8", symbol: "●" };
   }
-  return { bg: "rgba(16, 185, 129, 0.15)", border: "#10b981", text: "#34d399" };
+  return { bg: "rgba(16, 185, 129, 0.15)", border: "#10b981", text: "#34d399", symbol: "✓" };
 }
 
 export default function MaintenancePage() {
@@ -305,7 +305,7 @@ const ALL_STATIC_MAINTENANCE_LOGS = [
 
           <div style={{ background: "#162032", border: "1px solid #1e293b", borderRadius: "8px", padding: "0.65rem 0.85rem" }}>
             <div style={{ color: "#94a3b8", fontSize: "0.68rem", fontWeight: "700", letterSpacing: "0.5px" }}>CUMULATIVE DOWNTIME</div>
-            <div style={{ color: "#fb923c", fontSize: "1.4rem", fontWeight: "800", marginTop: "0.15rem" }}>{totalDowntime} <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: "500" }}>hours</span></div>
+            <div style={{ color: "#cbd5e1", fontSize: "1.4rem", fontWeight: "800", marginTop: "0.15rem" }}>{totalDowntime} <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: "500" }}>hours</span></div>
           </div>
 
           <div style={{ background: "#162032", border: "1px solid #1e293b", borderRadius: "8px", padding: "0.65rem 0.85rem" }}>
@@ -496,7 +496,7 @@ const ALL_STATIC_MAINTENANCE_LOGS = [
                           <User size={12} style={{ color: "#38bdf8" }} /> {log.technician}
                         </span>
                       </td>
-                      <td style={{ padding: "0.75rem 1rem", color: "#fb923c", fontWeight: "700", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "0.75rem 1rem", color: "#cbd5e1", fontWeight: "700", whiteSpace: "nowrap" }}>
                         {log.downtime_hours} hrs
                       </td>
                       <td style={{ padding: "0.75rem 1rem", color: "#34d399", fontWeight: "700", whiteSpace: "nowrap" }}>
@@ -634,7 +634,7 @@ const ALL_STATIC_MAINTENANCE_LOGS = [
 
         <div style={{ background: "#162032", border: "1px solid #1e293b", borderRadius: "8px", padding: "0.65rem 0.85rem" }}>
           <div style={{ color: "#94a3b8", fontSize: "0.68rem", fontWeight: "700", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>CRITICAL ASSETS</div>
-          <div style={{ color: "#fb923c", fontSize: "1.4rem", fontWeight: "800", marginTop: "0.15rem" }}>
+          <div style={{ color: "#f59e0b", fontSize: "1.4rem", fontWeight: "800", marginTop: "0.15rem" }}>
             {criticalCount} <span style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "500" }}>Critical</span>
           </div>
         </div>

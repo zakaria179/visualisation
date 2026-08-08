@@ -135,59 +135,59 @@ function getMetricUnit(key) {
 const TYPE_CONFIG = {
   Equipment: {
     radius: 20,
-    fill: "#0c2d48",
-    stroke: "#00f0ff",
-    glowColor: "rgba(0, 240, 255, 0.5)",
-    color: "#00f0ff",
+    fill: "#162032",
+    stroke: "#64748b",
+    glowColor: "rgba(100, 116, 139, 0.4)",
+    color: "#f8fafc",
     label: "Process Unit",
   },
   Stream: {
     radius: 14,
-    fill: "#0a2e1e",
-    stroke: "#10b981",
-    glowColor: "rgba(16, 185, 129, 0.4)",
-    color: "#34d399",
+    fill: "#162032",
+    stroke: "#475569",
+    glowColor: "rgba(71, 85, 105, 0.4)",
+    color: "#cbd5e1",
     label: "Pipeline",
   },
   Sensor: {
     radius: 14,
-    fill: "#1e1040",
-    stroke: "#a855f7",
-    glowColor: "rgba(168, 85, 247, 0.4)",
-    color: "#c084fc",
+    fill: "#162032",
+    stroke: "#0284c7",
+    glowColor: "rgba(2, 132, 199, 0.4)",
+    color: "#38bdf8",
     label: "SCADA Tag",
   },
   FailureMode: {
     radius: 14,
     fill: "#2d0f0f",
     stroke: "#ef4444",
-    glowColor: "rgba(239, 68, 68, 0.4)",
-    color: "#f87171",
+    glowColor: "rgba(239, 68, 68, 0.45)",
+    color: "#ef4444",
     label: "Failure Risk",
   },
   WorkOrder: {
     radius: 13,
-    fill: "#2c1a0e",
-    stroke: "#f97316",
-    glowColor: "rgba(249, 115, 22, 0.4)",
-    color: "#fb923c",
+    fill: "#162032",
+    stroke: "#94a3b8",
+    glowColor: "rgba(148, 163, 184, 0.3)",
+    color: "#cbd5e1",
     label: "Work Order",
   },
   Technician: {
     radius: 13,
-    fill: "#0c2035",
-    stroke: "#0284c7",
-    glowColor: "rgba(2, 132, 199, 0.4)",
-    color: "#38bdf8",
+    fill: "#162032",
+    stroke: "#94a3b8",
+    glowColor: "rgba(148, 163, 184, 0.3)",
+    color: "#e2e8f0",
     label: "Technician",
   },
 };
 
 const EDGE_COLORS = {
-  process: "#00f0ff",
-  telemetry: "#c084fc",
+  process: "#475569",
+  telemetry: "#0284c7",
   risk: "#ef4444",
-  work: "#f97316",
+  work: "#94a3b8",
 };
 
 /* ─────────────────────────────────────────────
@@ -411,11 +411,39 @@ function bfsShortestPath(edges, fromId, toId) {
   return allPathEdges.length > 0 ? allPathEdges : null;
 }
 
-export default function KnowledgeGraphPage() {
+export default function KnowledgeGraphPage({ onSelect, externalSelectedId }) {
   const [nodes, setNodes] = useState(STATIC_NODES);
   const [edges, setEdges] = useState(STATIC_EDGES);
 
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState(externalSelectedId || null);
+
+  useEffect(() => {
+    if (externalSelectedId !== undefined) {
+      // Map aggregate IDs: CY_001 from Flowsheet → CY_001_B (center cyclone in KG)
+      const mappedId =
+        externalSelectedId === "CY_001" ? "CY_001_B" : externalSelectedId;
+
+      setSelectedNodeId(mappedId || null);
+
+      if (mappedId) {
+        // Use static SCHEMATIC_POSITIONS — always available, no closure/loop risk
+        const nodePos = SCHEMATIC_POSITIONS[mappedId];
+
+        if (nodePos && svgRef.current) {
+          const rect = svgRef.current.getBoundingClientRect();
+          const viewW = rect.width || 600;
+          const viewH = rect.height || 700;
+          const focusScale = 1.2;
+          const centerX = viewW / 2 - nodePos.x * focusScale;
+          const centerY = viewH / 2 - nodePos.y * focusScale;
+          setTransform({ x: centerX, y: centerY, scale: focusScale });
+        }
+      } else {
+        // Deselected — reset to default overview state
+        setTransform({ x: 40, y: 20, scale: 0.8 });
+      }
+    }
+  }, [externalSelectedId]);
   const [telemetryData, setTelemetryData] = useState(null);
   const [filterType, setFilterType] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -699,14 +727,21 @@ export default function KnowledgeGraphPage() {
             setSelectedNodeId(node.id);
           }
         } else {
-          setSelectedNodeId((prev) => (prev === node.id ? null : node.id));
+          setSelectedNodeId((prev) => {
+            const nextId = prev === node.id ? null : node.id;
+            if (onSelect) onSelect(nextId);
+            return nextId;
+          });
         }
       }
     }
 
     // 2. Handle canvas background stationary click deselect (< 5px pan distance)
     if (isPanning && panDistanceRef.current < 5) {
-      if (!pathMode) setSelectedNodeId(null);
+      if (!pathMode) {
+        setSelectedNodeId(null);
+        if (onSelect) onSelect(null);
+      }
     }
 
     nodeMouseDownRef.current = null;
@@ -865,190 +900,115 @@ export default function KnowledgeGraphPage() {
   return (
     <div
       style={{
-        padding: "0.85rem 1.25rem",
+        padding: "0",
         color: "#f8fafc",
-        maxWidth: "1550px",
-        margin: "0 auto",
-        height: "calc(100vh - 70px)",
-        maxHeight: "calc(100vh - 70px)",
+        width: "100%",
+        height: "100%",
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        position: "relative",
       }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {/* ════ HEADER TOOLBAR ════ */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-          <Share2 size={22} style={{ color: "#00f0ff" }} />
-          <h2 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "800", color: "#00f0ff", letterSpacing: "0.4px" }}>
-            Industrial Knowledge Graph & Topology Engine
-          </h2>
-        </div>
-      </div>
-
-      {/* ════ SEARCH & FILTER PILLS ════ */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem", marginBottom: "0.6rem", flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: "0.65rem", alignItems: "center" }}>
-          <div style={{ position: "relative", flex: 1 }}>
-            <Search size={15} style={{ position: "absolute", left: "0.8rem", top: "50%", transform: "translateY(-50%)", color: "#00f0ff" }} />
-            <input
-              type="text"
-              placeholder="Search tag ID, component name, stream, sensor, or failure risk..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: "100%",
-                background: "#162032",
-                border: "1px solid #1e293b",
-                borderRadius: "8px",
-                padding: "0.45rem 0.75rem 0.45rem 2.3rem",
-                color: "#ffffff",
-                fontSize: "0.8rem",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-          <div style={{ background: "#162032", border: "1px solid #1e293b", borderRadius: "8px", padding: "0.45rem 0.8rem", fontSize: "0.74rem", color: "#94a3b8", whiteSpace: "nowrap" }}>
-            Active: <strong style={{ color: "#00f0ff" }}>{filteredNodes.length}</strong> / {nodes.length} nodes
-          </div>
-        </div>
-
-        {/* 5 Filter Pills */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "0.4rem" }}>
-          {[
-            { id: "ALL", label: "ALL", Icon: Layers },
-            { id: "Equipment", label: "PROCESS UNITS", Icon: Cpu },
-            { id: "Stream", label: "STREAMS", Icon: Activity },
-            { id: "Sensor", label: "SCADA TAGS", Icon: Zap },
-            { id: "FailureMode", label: "FAILURE RISKS", Icon: AlertTriangle },
-          ].map((tab) => {
-            const isActive = filterType === tab.id;
-            const TabIcon = tab.Icon;
-            const style = TYPE_CONFIG[tab.id] || { color: "#00f0ff" };
-            const count = tab.id === "ALL" ? nodes.length : nodes.filter((n) => n.type === tab.id).length;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setFilterType(tab.id)}
-                style={{
-                  background: isActive
-                    ? "linear-gradient(135deg, rgba(2, 132, 199, 0.3), rgba(0, 240, 255, 0.12))"
-                    : "#162032",
-                  border: `1px solid ${isActive ? "#00f0ff" : "#1e293b"}`,
-                  color: isActive ? "#00f0ff" : "#cbd5e1",
-                  borderRadius: "6px",
-                  padding: "0.38rem 0.5rem",
-                  fontSize: "0.72rem",
-                  fontWeight: isActive ? "700" : "600",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "0.35rem",
-                }}
-              >
-                <TabIcon size={12} style={{ color: isActive ? "#00f0ff" : style.color || "#94a3b8" }} />
-                {tab.label}
-                <span style={{
-                  background: isActive ? "rgba(0, 240, 255, 0.2)" : "rgba(30, 41, 59, 0.8)",
-                  padding: "0.05rem 0.3rem",
-                  borderRadius: "3px",
-                  fontSize: "0.6rem",
-                }}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ════ PATH TRACING BANNER ════ */}
-      {pathMode && (
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.65rem",
-          background: "rgba(14, 116, 144, 0.15)",
-          border: "1px solid #0e7490",
-          borderRadius: "8px",
-          padding: "0.4rem 0.85rem",
-          marginBottom: "0.6rem",
-          flexShrink: 0,
-          fontSize: "0.78rem",
-        }}>
-          <Route size={14} style={{ color: "#00f0ff" }} />
-          <span style={{ color: "#94a3b8" }}>
-            {!pathSource
-              ? "Click a source node to begin root-cause path tracing..."
-              : !pathTarget
-                ? <>Source: <strong style={{ color: "#00f0ff" }}>{pathSource}</strong> — now click a destination node</>
-                : <>
-                    <strong style={{ color: "#00f0ff" }}>{pathSource}</strong>
-                    <span style={{ color: "#475569", margin: "0 0.3rem" }}>→</span>
-                    <strong style={{ color: "#00f0ff" }}>{pathTarget}</strong>
-                    {tracedPath
-                      ? <span style={{ color: "#34d399", marginLeft: "0.5rem" }}>({tracedPath.length} hops traced)</span>
-                      : <span style={{ color: "#ef4444", marginLeft: "0.5rem" }}>No direct path found</span>
-                    }
-                  </>
-            }
-          </span>
-          <button
-            onClick={() => { setPathMode(false); setPathSource(null); setPathTarget(null); setTracedPath(null); }}
-            style={{ marginLeft: "auto", background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
       {/* ════ GRAPH CANVAS & INSPECTOR WORKSPACE ════ */}
-      <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: selectedNodeId ? "1fr 380px" : "1fr", gap: "0.85rem" }}>
+      <div style={{ flex: 1, height: "100%", width: "100%", position: "relative", overflow: "hidden" }}>
         {/* SVG Viewport */}
         <div
           style={{
-            background: "#060a12",
-            border: "1px solid #1e293b",
-            borderRadius: "10px",
+            width: "100%",
+            height: "100%",
+            background: "#0e1420",
             position: "relative",
             overflow: "hidden",
           }}
         >
-          {/* Legend */}
-          <div style={{
-            position: "absolute", top: "0.7rem", left: "0.7rem", zIndex: 10,
-            display: "flex", flexDirection: "column", gap: "0.35rem",
-            background: "rgba(6, 10, 18, 0.94)", border: "1px solid #1e293b",
-            padding: "0.4rem 0.75rem", borderRadius: "6px", fontSize: "0.65rem",
-          }}>
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              {Object.entries(TYPE_CONFIG).slice(0, 4).map(([type, cfg]) => (
-                <span key={type} style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: cfg.color }}>
-                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: cfg.stroke, boxShadow: `0 0 6px ${cfg.stroke}` }} />
-                  {cfg.label}
-                </span>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: "0.75rem", color: "#64748b", borderTop: "1px solid #1e293b", paddingTop: "0.3rem" }}>
-              <span><strong style={{ color: "#00f0ff" }}>───</strong> Process Stream</span>
-              <span><strong style={{ color: "#c084fc" }}>- - -</strong> SCADA Telemetry</span>
-              <span><strong style={{ color: "#ef4444" }}>. . .</strong> Failure Risk</span>
-            </div>
+          {/* In-Canvas Label — top-left, matching Flowsheet "Phosphate Grinding Circuit" style */}
+          <div
+            style={{
+              position: "absolute",
+              top: "14px",
+              left: "14px",
+              zIndex: 10,
+              pointerEvents: "none",
+            }}
+          >
+            <span
+              style={{
+                color: "#00f0ff",
+                fontWeight: "700",
+                fontSize: "0.8rem",
+                letterSpacing: "1px",
+                textTransform: "uppercase",
+              }}
+            >
+              Knowledge Graph
+            </span>
+          </div>
+          {/* Bottom-Left Independent Category Filter Icon Boxes (Icon Only, Down at Bottom) */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "14px",
+              left: "14px",
+              zIndex: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            {[
+              { id: "ALL", title: "All Nodes", Icon: Layers },
+              { id: "Equipment", title: "Process Units", Icon: Cpu },
+              { id: "Stream", title: "Stream Pipelines", Icon: Activity },
+              { id: "Sensor", title: "SCADA Tags", Icon: Zap },
+              { id: "FailureMode", title: "Failure Risks", Icon: AlertTriangle },
+            ].map((tab) => {
+              const isActive = filterType === tab.id;
+              const TabIcon = tab.Icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setFilterType(tab.id)}
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    background: isActive ? "rgba(0, 240, 255, 0.2)" : "rgba(22, 31, 48, 0.92)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                    border: `1px solid ${isActive ? "#00f0ff" : "#2a384e"}`,
+                    color: isActive ? "#00f0ff" : "#94a3b8",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s ease",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+                  }}
+                  title={tab.title}
+                >
+                  <TabIcon size={16} />
+                </button>
+              );
+            })}
           </div>
 
-          {/* Canvas Controls Overlay */}
-          <div style={{
-            position: "absolute", top: "0.7rem", right: "0.7rem", zIndex: 10,
-            display: "flex", alignItems: "center", gap: "0.3rem",
-            background: "rgba(6, 10, 18, 0.95)", border: "1px solid #1e293b",
-            borderRadius: "8px", padding: "0.3rem 0.4rem",
-          }}>
-            {/* Trace Path Icon */}
+          {/* Top-Right Independent Canvas Tool Boxes */}
+          <div
+            style={{
+              position: "absolute",
+              top: "14px",
+              right: "14px",
+              zIndex: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            {/* Trace Path Box */}
             <button
               onClick={() => {
                 setPathMode(!pathMode);
@@ -1056,60 +1016,119 @@ export default function KnowledgeGraphPage() {
               }}
               title={pathMode ? "Disable Path Tracing" : "Trace Path (Root Cause Traversal)"}
               style={{
-                background: pathMode ? "rgba(0, 240, 255, 0.25)" : "#162032",
-                border: `1px solid ${pathMode ? "#00f0ff" : "#1e293b"}`,
+                width: "36px",
+                height: "36px",
+                background: pathMode ? "rgba(0, 240, 255, 0.25)" : "rgba(22, 31, 48, 0.92)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: `1px solid ${pathMode ? "#00f0ff" : "#2a384e"}`,
                 color: pathMode ? "#00f0ff" : "#94a3b8",
-                borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center"
+                borderRadius: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s ease",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
               }}
             >
-              <Route size={15} />
+              <Route size={16} />
             </button>
 
-            {/* Live Physics Icon */}
+            {/* Live Physics Box */}
             <button
               onClick={() => setPhysicsRunning(!physicsRunning)}
               title={physicsRunning ? "Freeze Physics Layout" : "Live Force-Directed Physics"}
               style={{
-                background: physicsRunning ? "rgba(0, 240, 255, 0.25)" : "#162032",
-                border: `1px solid ${physicsRunning ? "#00f0ff" : "#1e293b"}`,
+                width: "36px",
+                height: "36px",
+                background: physicsRunning ? "rgba(0, 240, 255, 0.25)" : "rgba(22, 31, 48, 0.92)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: `1px solid ${physicsRunning ? "#00f0ff" : "#2a384e"}`,
                 color: physicsRunning ? "#00f0ff" : "#94a3b8",
-                borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center"
+                borderRadius: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s ease",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
               }}
             >
-              {physicsRunning ? <Pause size={15} /> : <Play size={15} />}
+              {physicsRunning ? <Pause size={16} /> : <Play size={16} />}
             </button>
 
-            {/* Clean Layout Icon */}
+            {/* Clean Layout Box */}
             <button
               onClick={resetLayout}
               title="Clean Schematic Layout"
-              style={{ background: "#162032", border: "1px solid #1e293b", color: "#cbd5e1", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+              style={{
+                width: "36px",
+                height: "36px",
+                background: "rgba(22, 31, 48, 0.92)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid #2a384e",
+                color: "#cbd5e1",
+                borderRadius: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s ease",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+              }}
             >
-              <Wand2 size={15} />
+              <Wand2 size={16} />
             </button>
 
-            {/* Sync Topology Icon */}
+            {/* Zoom In Box */}
             <button
-              onClick={fetchGraphTopology}
-              title={`Sync Topology (${nodes.length} nodes)`}
-              style={{ background: "#162032", border: "1px solid #1e293b", color: "#00f0ff", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+              onClick={() => setTransform((p) => ({ ...p, scale: Math.min(4, p.scale * 1.25) }))}
+              title="Zoom In"
+              style={{
+                width: "36px",
+                height: "36px",
+                background: "rgba(22, 31, 48, 0.92)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid #2a384e",
+                color: "#00f0ff",
+                borderRadius: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s ease",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+              }}
             >
-              <RefreshCw size={15} />
+              <ZoomIn size={16} />
             </button>
 
-            <span style={{ height: "14px", width: "1px", background: "#334155", margin: "0 0.1rem" }} />
-
-            <button onClick={() => setShowAllLinks(!showAllLinks)} title={showAllLinks ? "Focus Mode" : "Show All Links"} style={{ background: showAllLinks ? "rgba(0, 240, 255, 0.2)" : "#162032", border: `1px solid ${showAllLinks ? "#00f0ff" : "#1e293b"}`, color: showAllLinks ? "#00f0ff" : "#cbd5e1", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
-              {showAllLinks ? <Eye size={15} /> : <EyeOff size={15} />}
-            </button>
-            <button onClick={() => setTransform((p) => ({ ...p, scale: Math.min(4, p.scale * 1.25) }))} title="Zoom In" style={{ background: "#162032", border: "1px solid #1e293b", color: "#00f0ff", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
-              <ZoomIn size={15} />
-            </button>
-            <button onClick={() => setTransform((p) => ({ ...p, scale: Math.max(0.2, p.scale * 0.8) }))} title="Zoom Out" style={{ background: "#162032", border: "1px solid #1e293b", color: "#00f0ff", borderRadius: "5px", padding: "0.35rem", cursor: "pointer", display: "flex", alignItems: "center" }}>
-              <ZoomOut size={15} />
-            </button>
-            <button onClick={() => setTransform({ x: 40, y: 20, scale: 0.8 })} title="Reset Viewport Scale" style={{ background: "#162032", border: "1px solid #1e293b", color: "#cbd5e1", borderRadius: "5px", padding: "0.35rem 0.5rem", fontSize: "0.68rem", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.2rem" }}>
-              <Maximize2 size={13} /> {Math.round(transform.scale * 100)}%
+            {/* Zoom Out Box */}
+            <button
+              onClick={() => setTransform((p) => ({ ...p, scale: Math.max(0.2, p.scale * 0.8) }))}
+              title="Zoom Out"
+              style={{
+                width: "36px",
+                height: "36px",
+                background: "rgba(22, 31, 48, 0.92)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid #2a384e",
+                color: "#00f0ff",
+                borderRadius: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s ease",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+              }}
+            >
+              <ZoomOut size={16} />
             </button>
           </div>
 
@@ -1141,7 +1160,15 @@ export default function KnowledgeGraphPage() {
               </filter>
             </defs>
 
-            <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}>
+            <g
+              transform={`translate(${transform.x}, ${transform.y}) scale(${transform.scale})`}
+              style={{
+                transition:
+                  draggedNode || isPanning
+                    ? "none"
+                    : "transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+              }}
+            >
               {/* Process Stage Guides */}
               {[
                 { label: "STAGE 1: FEED SUMP", x: 190 },
@@ -1390,213 +1417,6 @@ export default function KnowledgeGraphPage() {
             </g>
           </svg>
         </div>
-
-        {/* Right Inspector Panel */}
-        {selectedNodeId && (
-          <div
-            style={{
-              background: "#0a0f1a",
-              border: "1px solid #1e293b",
-              borderRadius: "10px",
-              padding: "0.85rem 1rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.7rem",
-              overflowY: "auto",
-            }}
-          >
-            {inspectorData?.node && (
-              <>
-                <div style={{ borderBottom: "1px solid #1e293b", paddingBottom: "0.65rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.3rem" }}>
-                    <span style={{ color: "#00f0ff", fontSize: "0.85rem", fontFamily: "monospace", fontWeight: "800" }}>
-                      {inspectorData.node.id}
-                    </span>
-                    <span style={{
-                      fontSize: "0.62rem",
-                      background: "rgba(0, 240, 255, 0.12)",
-                      border: `1px solid ${(TYPE_CONFIG[inspectorData.node.type] || TYPE_CONFIG.Equipment).stroke}`,
-                      color: (TYPE_CONFIG[inspectorData.node.type] || TYPE_CONFIG.Equipment).color,
-                      padding: "0.1rem 0.4rem",
-                      borderRadius: "4px",
-                      fontWeight: "700",
-                    }}>
-                      {inspectorData.node.type}
-                    </span>
-                  </div>
-                  <h3 style={{ margin: 0, color: "#f8fafc", fontSize: "1.05rem", fontWeight: "800" }}>
-                    {inspectorData.node.name}
-                  </h3>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem" }}>
-                  <div style={{ background: "#111827", border: "1px solid #1e293b", borderRadius: "6px", padding: "0.45rem 0.65rem" }}>
-                    <div style={{ color: "#64748b", fontSize: "0.6rem", fontWeight: "700" }}>CATEGORY</div>
-                    <div style={{ color: "#e2e8f0", fontSize: "0.78rem", fontWeight: "600", marginTop: "0.1rem" }}>
-                      {inspectorData.node.category || "General"}
-                    </div>
-                  </div>
-                  <div style={{ background: "#111827", border: "1px solid #1e293b", borderRadius: "6px", padding: "0.45rem 0.65rem" }}>
-                    <div style={{ color: "#64748b", fontSize: "0.6rem", fontWeight: "700" }}>STATUS</div>
-                    <div style={{ color: "#34d399", fontSize: "0.78rem", fontWeight: "700", marginTop: "0.1rem" }}>
-                      ● {inspectorData.node.status || "ACTIVE"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Synchronized Telemetry & Derived Metrics Drawer Section */}
-                {telemetryData && (
-                  <div
-                    style={{
-                      background: "#060a12",
-                      border: "1px solid #1e293b",
-                      borderRadius: "8px",
-                      padding: "0.6rem 0.75rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.4rem",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <div style={{ color: "#00f0ff", fontSize: "0.72rem", fontWeight: "800", borderBottom: "1px solid #1e293b", paddingBottom: "0.35rem" }}>
-                      LIVE TELEMETRY & DERIVED KPIS
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.35rem", maxHeight: "160px", overflowY: "auto" }}>
-                      {telemetryData.live_metrics &&
-                        Object.entries(telemetryData.live_metrics).map(([k, v]) => (
-                          <div key={k} style={{ background: "#111827", border: "1px solid #1e293b", padding: "0.35rem 0.5rem", borderRadius: "5px" }}>
-                            <div style={{ color: "#94a3b8", fontSize: "0.6rem", fontWeight: "600" }}>{getDisplayMetricName(k)}</div>
-                            <div style={{ color: "#00f0ff", fontSize: "0.82rem", fontWeight: "800", fontFamily: "monospace", marginTop: "0.1rem", display: "flex", alignItems: "baseline", gap: "0.25rem" }}>
-                              <span>{typeof v === "number" ? v.toFixed(2) : v}</span>
-                              {getMetricUnit(k) && <span style={{ color: "#38bdf8", fontSize: "0.65rem", fontWeight: "700", fontFamily: "sans-serif" }}>{getMetricUnit(k)}</span>}
-                            </div>
-                          </div>
-                        ))}
-                      {telemetryData.derived_metrics &&
-                        Object.entries(telemetryData.derived_metrics).map(([k, v]) => (
-                          <div key={k} style={{ background: "#111827", border: "1px solid #a855f7", padding: "0.35rem 0.5rem", borderRadius: "5px" }}>
-                            <div style={{ color: "#c084fc", fontSize: "0.6rem", fontWeight: "600" }}>{getDisplayMetricName(k)}</div>
-                            <div style={{ color: "#a855f7", fontSize: "0.82rem", fontWeight: "800", fontFamily: "monospace", marginTop: "0.1rem", display: "flex", alignItems: "baseline", gap: "0.25rem" }}>
-                              <span>{typeof v === "number" ? v.toFixed(2) : v}</span>
-                              {getMetricUnit(k) && <span style={{ color: "#38bdf8", fontSize: "0.65rem", fontWeight: "700", fontFamily: "sans-serif" }}>{getMetricUnit(k)}</span>}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Multi-Hop Neighbor Radius Selector */}
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <span style={{ color: "#64748b", fontSize: "0.7rem", fontWeight: "700" }}>HOPS:</span>
-                  {[1, 2, 3].map((h) => (
-                    <button
-                      key={h}
-                      onClick={() => setExpandedHops(h)}
-                      style={{
-                        background: expandedHops === h ? "rgba(0, 240, 255, 0.2)" : "#111827",
-                        border: `1px solid ${expandedHops === h ? "#00f0ff" : "#1e293b"}`,
-                        color: expandedHops === h ? "#00f0ff" : "#94a3b8",
-                        borderRadius: "4px",
-                        padding: "0.2rem 0.5rem",
-                        fontSize: "0.68rem",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {h}-hop
-                    </button>
-                  ))}
-                </div>
-
-                {/* Connected Neighbors List */}
-                <div style={{
-                  background: "#060a12",
-                  border: "1px solid #1e293b",
-                  borderRadius: "8px",
-                  padding: "0.6rem 0.75rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.4rem",
-                  flex: 1,
-                  minHeight: "220px",
-                }}>
-                  <div style={{ color: "#00f0ff", fontSize: "0.72rem", fontWeight: "800", borderBottom: "1px solid #1e293b", paddingBottom: "0.35rem", display: "flex", justifyContent: "space-between", flexShrink: 0 }}>
-                    <span>CONNECTED NEIGHBORS</span>
-                    <span>({inspectorData.neighbors?.length || 0})</span>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", flex: 1, minHeight: 0, overflowY: "auto" }}>
-                    {inspectorData.neighbors?.map((nbr) => {
-                      const cfg = TYPE_CONFIG[nbr.type] || TYPE_CONFIG.Equipment;
-                      return (
-                        <div
-                          key={nbr.id}
-                          onClick={() => setSelectedNodeId(nbr.id)}
-                          style={{
-                            background: "#111827",
-                            border: `1px solid ${cfg.stroke}40`,
-                            borderRadius: "5px",
-                            padding: "0.35rem 0.55rem",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                          }}
-                        >
-                          <div>
-                            <span style={{ color: cfg.color, fontSize: "0.74rem", fontWeight: "800", fontFamily: "monospace" }}>{nbr.id}</span>
-                            <span style={{ color: "#94a3b8", fontSize: "0.68rem", marginLeft: "0.4rem" }}>{nbr.name}</span>
-                          </div>
-                          <span style={{ fontSize: "0.58rem", color: "#64748b", background: "#1e293b", padding: "0.08rem 0.3rem", borderRadius: "3px" }}>
-                            {nbr.hop}h · {nbr.type}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Work Orders */}
-                {inspectorData.node.type === "Equipment" && workOrders.length > 0 && (
-                  <div style={{
-                    background: "#060a12",
-                    border: "1px solid #1e293b",
-                    borderRadius: "8px",
-                    padding: "0.6rem 0.75rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.35rem",
-                    flexShrink: 0,
-                  }}>
-                    <div style={{ color: "#fb923c", fontSize: "0.72rem", fontWeight: "800", borderBottom: "1px solid #1e293b", paddingBottom: "0.35rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
-                      <Wrench size={12} /> MAINTENANCE HISTORY ({workOrders.length})
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem", maxHeight: "140px", overflowY: "auto" }}>
-                      {workOrders.slice(0, 8).map((wo, i) => (
-                        <div key={i} style={{
-                          background: "#111827",
-                          border: "1px solid #1e293b",
-                          borderRadius: "5px",
-                          padding: "0.4rem 0.55rem",
-                          fontSize: "0.7rem",
-                          borderLeft: "3px solid #f97316",
-                        }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", color: "#fb923c", fontWeight: "700", fontSize: "0.65rem" }}>
-                            <span>{wo.log_id || wo.id}</span>
-                            <span style={{ color: "#64748b" }}>{wo.maintenance_date}</span>
-                          </div>
-                          <div style={{ color: "#cbd5e1", fontSize: "0.68rem", marginTop: "0.15rem" }}>
-                            {wo.description || wo.parts_replaced}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

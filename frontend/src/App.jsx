@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Menu, Activity, Radio, Bot, Sparkles } from "lucide-react";
+import { Menu, Activity, Radio, Bot, Sparkles, LogOut, UserCheck, Columns, Split, SlidersHorizontal } from "lucide-react";
+import { useAuth } from "./context/AuthContext";
 import Flowsheet from "./pages/Flowsheet";
 import MaintenancePage from "./pages/MaintenancePage";
 import KnowledgeGraphPage from "./pages/KnowledgeGraphPage";
 import NavigationSidebar from "./components/NavigationSidebar";
 import GraphRagDrawer from "./components/GraphRagDrawer";
+import TelemetryPopoutDrawer from "./components/TelemetryPopoutDrawer";
 import {
   getSimulationStatus,
   startSimulation,
@@ -151,26 +153,69 @@ function MetricCard({ label, value, unit }) {
   const displayStr = isValidNum ? numVal.toFixed(2) : (value || "0.00");
   const metricUnit = unit || getMetricUnit(label);
 
-  let color = "#00f0ff";
+  let alarmLevel = null; // 'P4', 'P3', 'P2', 'P1'
+  let color = "#cbd5e1";
+  let barColor = "#475569";
   let percent = 50;
 
   if (label.includes("Temp") || label.includes("Vibration")) {
-    if (isValidNum && numVal > 65) color = "#ef4444";
-    else if (isValidNum && numVal > 45) color = "#f59e0b";
+    if (isValidNum && numVal > 65) {
+      alarmLevel = "P4";
+      color = "#ef4444";
+      barColor = "#ef4444";
+    } else if (isValidNum && numVal > 55) {
+      alarmLevel = "P3";
+      color = "#f59e0b";
+      barColor = "#f59e0b";
+    } else if (isValidNum && numVal > 48) {
+      alarmLevel = "P2";
+      color = "#f97316";
+      barColor = "#f97316";
+    } else {
+      barColor = "#0ea5e9";
+    }
     percent = isValidNum ? Math.min(100, Math.max(15, (numVal / 100) * 100)) : 50;
   } else if (label.includes("Level") || label.includes("Solid Frac") || label.includes("Wear") || label.includes("%")) {
+    if (isValidNum && numVal > 90) {
+      alarmLevel = "P4";
+      color = "#ef4444";
+      barColor = "#ef4444";
+    } else if (isValidNum && numVal > 85) {
+      alarmLevel = "P3";
+      color = "#f59e0b";
+      barColor = "#f59e0b";
+    } else if (isValidNum && numVal > 80) {
+      alarmLevel = "P2";
+      color = "#f97316";
+      barColor = "#f97316";
+    } else {
+      barColor = "#0ea5e9";
+    }
     percent = isValidNum ? Math.min(100, Math.max(5, numVal)) : 50;
   } else if (label.includes("Flow")) {
+    barColor = "#475569";
     percent = isValidNum ? Math.min(100, Math.max(10, (numVal / 1500) * 100)) : 40;
   } else if (label.includes("Power") || label.includes("Current") || label.includes("Pressure")) {
+    barColor = "#475569";
     percent = isValidNum ? Math.min(100, Math.max(15, (numVal / 2000) * 100)) : 60;
   }
 
+  const isAlarmP4 = alarmLevel === "P4";
+  const isAlarmP3 = alarmLevel === "P3";
+  const isAlarmP2 = alarmLevel === "P2";
+
   return (
     <div
+      className={isAlarmP4 ? "isa-alarm-pulsing" : isAlarmP3 || isAlarmP2 ? "isa-warning-alert" : ""}
       style={{
-        background: "linear-gradient(135deg, #162032 0%, #0f172a 100%)",
-        border: "1px solid #1e293b",
+        background: "linear-gradient(135deg, #162032 0%, #0e1420 100%)",
+        border: isAlarmP4
+          ? "1px solid #ef4444"
+          : isAlarmP3
+          ? "1px solid #f59e0b"
+          : isAlarmP2
+          ? "1px solid #f97316"
+          : "1px solid #2a384e",
         borderRadius: "8px",
         padding: "0.6rem 0.75rem",
         display: "flex",
@@ -182,31 +227,67 @@ function MetricCard({ label, value, unit }) {
         position: "relative",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "0.25rem" }}>
-        <span style={{ color: "#94a3b8", fontSize: "11px", fontWeight: "600", lineHeight: "1.2" }} title={label}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.25rem" }}>
+        <span
+          style={{
+            color: isAlarmP4 ? "#fca5a5" : isAlarmP3 ? "#fde68a" : isAlarmP2 ? "#fdba74" : "#94a3b8",
+            fontSize: "11px",
+            fontWeight: "600",
+            lineHeight: "1.2",
+          }}
+          title={label}
+        >
           {label}
         </span>
+        {alarmLevel === "P4" && <span className="isa-badge-p4">▲ P4</span>}
+        {alarmLevel === "P3" && <span className="isa-badge-p3">◆ P3</span>}
+        {alarmLevel === "P2" && <span className="isa-badge-p2">■ P2</span>}
       </div>
 
       <div style={{ display: "flex", alignItems: "baseline", marginTop: "0.25rem", gap: "0.3rem" }}>
-        <span style={{ color: color, fontFamily: "'JetBrains Mono', monospace", fontSize: "1.25rem", fontWeight: "800", lineHeight: "1.1", transition: "color 0.3s ease" }}>
+        <span
+          style={{
+            color: color,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "1.25rem",
+            fontWeight: "800",
+            lineHeight: "1.1",
+            transition: "color 0.3s ease",
+          }}
+        >
           {displayStr}
         </span>
         {metricUnit && (
-          <span style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: "700", fontFamily: "sans-serif" }}>
+          <span
+            style={{
+              color: isAlarmP4 ? "#f87171" : isAlarmP3 ? "#fbbf24" : isAlarmP2 ? "#fb923c" : "#94a3b8",
+              fontSize: "0.75rem",
+              fontWeight: "700",
+              fontFamily: "sans-serif",
+            }}
+          >
             {metricUnit}
           </span>
         )}
       </div>
 
-      <div style={{ width: "100%", height: "4px", backgroundColor: "#1e293b", borderRadius: "2px", overflow: "hidden", marginTop: "0.35rem" }}>
+      <div
+        style={{
+          width: "100%",
+          height: "4px",
+          backgroundColor: "#162032",
+          borderRadius: "2px",
+          overflow: "hidden",
+          marginTop: "0.35rem",
+        }}
+      >
         <div
           style={{
             width: `${percent}%`,
             height: "100%",
-            backgroundColor: color,
+            backgroundColor: barColor,
             borderRadius: "2px",
-            boxShadow: `0 0 8px ${color}`,
+            boxShadow: isAlarmP4 ? "0 0 8px #ef4444" : isAlarmP3 ? "0 0 8px #f59e0b" : "none",
             transition: "width 0.4s ease, background-color 0.4s ease",
           }}
         />
@@ -215,29 +296,17 @@ function MetricCard({ label, value, unit }) {
   );
 }
 
-const VALID_TABS = ["flowsheet", "maintenance", "knowledge-graph", "graph"];
-
-const getInitialTab = () => {
-  const hash = window.location.hash.replace("#", "");
-  if (hash && VALID_TABS.includes(hash)) {
-    return hash;
-  }
-  const saved = localStorage.getItem("activeTab");
-  if (saved && VALID_TABS.includes(saved)) {
-    return saved;
-  }
-  return "flowsheet";
-};
-
 export default function App() {
-  const [activeTab, setActiveTab] = useState(getInitialTab);
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState("flowsheet");
 
+  // Clear any stale hash/localStorage that could cause wrong-tab startup
   useEffect(() => {
-    localStorage.setItem("activeTab", activeTab);
-    if (window.location.hash !== `#${activeTab}`) {
-      window.location.hash = activeTab;
+    localStorage.removeItem("activeTab");
+    if (window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
     }
-  }, [activeTab]);
+  }, []);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isRagOpen, setIsRagOpen] = useState(false);
   const [asset, setAsset] = useState(null);
@@ -245,11 +314,38 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [simStatus, setSimStatus] = useState(null);
+  const [selectionSource, setSelectionSource] = useState("flowsheet");
+
+  // Extensible Dual-Viewport Split System State
+  const [splitRatio, setSplitRatio] = useState(50); // percentage for flowsheet (0..100)
+  const [isResizing, setIsResizing] = useState(false);
+  const [showTelemetryDrawer, setShowTelemetryDrawer] = useState(false);
+  const [expandedPane, setExpandedPane] = useState(null); // null | "flowsheet" | "graph"
 
   const selectedTagRef = useRef(selectedTag);
   const [simStep, setSimStep] = useState(0);
 
   selectedTagRef.current = selectedTag;
+
+  const handleMouseDownSplitter = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+
+    const handleMouseMove = (moveEvent) => {
+      const totalWidth = window.innerWidth;
+      const newRatio = Math.max(15, Math.min(85, (moveEvent.clientX / totalWidth) * 100));
+      setSplitRatio(newRatio);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
 
   function getAssetStage(tag) {
     if (tag === "P_001" || tag === "P_101") return 1;
@@ -287,13 +383,15 @@ export default function App() {
     return data;
   }
 
-  const loadAsset = async (tag) => {
+  const loadAsset = async (tag, source = "flowsheet") => {
+    setSelectionSource(source);
     selectedTagRef.current = tag || null;
     if (!tag) {
       setAsset(null);
       setSelectedTag(null);
       return;
     }
+    setShowTelemetryDrawer(true);
     setLoading(true);
     setError(null);
     try {
@@ -351,7 +449,7 @@ export default function App() {
         width: "100vw",
         maxHeight: "100vh",
         maxWidth: "100vw",
-        backgroundColor: "#090d16",
+        backgroundColor: "#0e1420",
         color: "#f8fafc",
         display: "flex",
         flexDirection: "column",
@@ -371,8 +469,8 @@ export default function App() {
         style={{
           height: "52px",
           flexShrink: 0,
-          background: "#0f172a",
-          borderBottom: "1px solid #1e293b",
+          background: "#0e1420",
+          borderBottom: "1px solid #2a384e",
           padding: "0 1.25rem",
           display: "flex",
           justifyContent: "space-between",
@@ -384,9 +482,9 @@ export default function App() {
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             style={{
-              background: "#162032",
-              border: "1px solid #1e293b",
-              color: "#00f0ff",
+              background: "#161f30",
+              border: "1px solid #475569",
+              color: "#e2e8f0",
               borderRadius: "6px",
               padding: "0.35rem 0.55rem",
               cursor: "pointer",
@@ -400,25 +498,25 @@ export default function App() {
             <Menu size={19} />
           </button>
 
-          <h1 style={{ margin: 0, fontSize: "0.95rem", fontWeight: "800", letterSpacing: "0.6px" }}>
-            <span style={{ color: "#00f0ff", fontWeight: "900" }}>NEXUS</span> DIGITAL TWIN{" "}
+          <h1 style={{ margin: 0, fontSize: "0.95rem", fontWeight: "800", letterSpacing: "0.5px" }}>
+            <span style={{ color: "#f8fafc", fontWeight: "900" }}>NEXUS</span> DIGITAL TWIN{" "}
             <span style={{ color: "#475569", fontWeight: "300", margin: "0 0.4rem" }}>|</span>{" "}
-            <span style={{ color: "#38bdf8", fontWeight: "400", fontSize: "0.82rem" }}>
-              {activeTab === "flowsheet" ? "Process Flowsheet & Control View" : activeTab === "maintenance" ? "Maintenance Circuit & Reliability View" : "Knowledge Graph & Topology View"}
+            <span style={{ color: "#cbd5e1", fontWeight: "500", fontSize: "0.82rem" }}>
+              {activeTab === "flowsheet" ? "Process Flowsheet & System Knowledge Graph Dual View" : activeTab === "maintenance" ? "Level 3 Health • Asset Reliability & Circuit Maintenance" : "Level 2 Topology • Knowledge Graph & System Network"}
             </span>
           </h1>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: "0.45rem",
               fontSize: "0.72rem",
-              color: "#94a3b8",
-              background: "#162032",
-              border: "1px solid #1e293b",
+              color: "#cbd5e1",
+              background: "#161f30",
+              border: "1px solid #2a384e",
               padding: "0.25rem 0.65rem",
               borderRadius: "12px",
               userSelect: "none",
@@ -429,233 +527,213 @@ export default function App() {
               SCADA ONLINE
             </span>
           </div>
+
+          {user && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.45rem",
+                fontSize: "0.72rem",
+                background: "#161f30",
+                border: "1px solid #475569",
+                padding: "0.25rem 0.75rem",
+                borderRadius: "12px",
+              }}
+            >
+              <UserCheck size={13} color="#94a3b8" />
+              <span style={{ fontWeight: "700", color: "#f8fafc" }}>{user.full_name || user.username}</span>
+              <span style={{ color: "#475569" }}>•</span>
+              <span style={{ color: "#cbd5e1", fontWeight: "600" }}>{user.role}</span>
+            </div>
+          )}
+
+          <button
+            onClick={logout}
+            style={{
+              background: "rgba(239, 68, 68, 0.15)",
+              border: "1px solid rgba(239, 68, 68, 0.4)",
+              color: "#fca5a5",
+              borderRadius: "6px",
+              padding: "0.3rem 0.65rem",
+              cursor: "pointer",
+              fontSize: "0.72rem",
+              fontWeight: "600",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              transition: "all 0.15s ease",
+            }}
+            title="Log out of session"
+          >
+            <LogOut size={13} />
+            <span>Logout</span>
+          </button>
         </div>
       </header>
 
-      {activeTab === "flowsheet" ? (
+      {activeTab !== "maintenance" ? (
         <main
           style={{
             flex: 1,
             display: "grid",
-            gridTemplateColumns: "minmax(0, 3.6fr) minmax(260px, 1fr)",
-            gap: "0.6rem",
-            padding: "0.5rem",
+            gridTemplateColumns: expandedPane === "flowsheet" ? "1fr 0px" : expandedPane === "graph" ? "0px 1fr" : "1fr 1fr",
             height: "calc(100vh - 52px)",
             maxHeight: "calc(100vh - 52px)",
             overflow: "hidden",
             boxSizing: "border-box",
             position: "relative",
+            background: "#0e1420",
+            transition: "grid-template-columns 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
-          <section style={{ height: "100%", width: "100%", minWidth: 0, minHeight: 0, overflow: "hidden", position: "relative" }}>
-            <Flowsheet 
-              onSelect={loadAsset} 
-              selected={asset?.tag} 
-              isRunning={simStatus?.state === "RUNNING"} 
-              onSimStepChange={setSimStep}
-              isSimActive={simStatus?.state === "RUNNING" || simStatus?.state === "PAUSED"}
-              simStatus={simStatus}
-              onStartToggle={async () => {
-                if (simStatus?.state === "RUNNING") {
-                  setSimStatus(await pauseSimulation());
-                } else {
-                  setSimStatus(await startSimulation());
-                }
-              }}
-              onRestart={async () => setSimStatus(await restartSimulation())}
-              onStop={async () => setSimStatus(await stopSimulation())}
-              onSpeedChange={async (spd) => setSimStatus(await setSimulationSpeed(spd))}
-            />
-          </section>
-
-          <aside
+          {/* LEFT CANVASES: PROCESS FLOWSHEET & CONTROL */}
+          <section
             style={{
               height: "100%",
+              width: "100%",
               minWidth: 0,
               minHeight: 0,
-              background: "#0f172a",
-              borderRadius: "8px",
-              border: "1px solid #1e293b",
-              padding: "0.75rem",
+              borderRight: "1px solid #1e293b",
+              position: "relative",
+              overflow: "hidden",
               display: "flex",
               flexDirection: "column",
-              gap: "0.75rem",
-              overflowY: "auto",
-              overflowX: "hidden",
-              boxSizing: "border-box",
             }}
           >
-            <div
+            <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
+              <Flowsheet 
+                onSelect={(tag) => loadAsset(tag, "flowsheet")} 
+                selected={asset?.tag} 
+                isRunning={simStatus?.state === "RUNNING"} 
+                onSimStepChange={setSimStep}
+                isSimActive={simStatus?.state === "RUNNING" || simStatus?.state === "PAUSED"}
+                simStatus={simStatus}
+                onStartToggle={async () => {
+                  if (simStatus?.state === "RUNNING") {
+                    setSimStatus(await pauseSimulation());
+                  } else {
+                    setSimStatus(await startSimulation());
+                  }
+                }}
+                onRestart={async () => setSimStatus(await restartSimulation())}
+                onStop={async () => setSimStatus(await stopSimulation())}
+                onSpeedChange={async (spd) => setSimStatus(await setSimulationSpeed(spd))}
+              />
+            </div>
+          </section>
+
+          {/* ═══ CENTER EXPAND TOGGLE BUTTON ═══ */}
+          <div
+            style={{
+              position: "absolute",
+              left: expandedPane === "flowsheet" ? "calc(100% - 20px)" : expandedPane === "graph" ? "52px" : "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 20,
+              display: isSidebarOpen ? "none" : "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "6px",
+              transition: "left 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            {/* Expand Flowsheet button */}
+            <button
+              onClick={() => setExpandedPane(expandedPane === "flowsheet" ? null : "flowsheet")}
+              title={expandedPane === "flowsheet" ? "Restore split view" : "Expand Flowsheet"}
               style={{
-                borderBottom: "1px solid #1e293b",
-                paddingBottom: "0.5rem",
+                width: "28px",
+                height: "28px",
+                borderRadius: "8px",
+                background: expandedPane === "flowsheet" ? "rgba(0,240,255,0.25)" : "rgba(14,20,32,0.92)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+                border: `1px solid ${expandedPane === "flowsheet" ? "#00f0ff" : "#2a384e"}`,
+                color: expandedPane === "flowsheet" ? "#00f0ff" : "#64748b",
+                cursor: "pointer",
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
-                flexShrink: 0,
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                boxShadow: expandedPane === "flowsheet" ? "0 0 12px rgba(0,240,255,0.3)" : "0 2px 8px rgba(0,0,0,0.5)",
               }}
             >
-              <h2 style={{ margin: 0, fontSize: "0.82rem", color: "#f8fafc", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                <Activity size={15} style={{ color: "#00f0ff" }} /> Telemetry Inspection
-              </h2>
-              <span
-                style={{
-                  fontSize: "0.65rem",
-                  padding: "0.15rem 0.45rem",
-                  borderRadius: "4px",
-                  background: displayAsset?.mqtt?.active ? "rgba(16, 185, 129, 0.15)" : "rgba(56, 189, 248, 0.15)",
-                  color: displayAsset?.mqtt?.active ? "#34d399" : "#38bdf8",
-                  fontWeight: "700",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.25rem",
-                }}
-              >
-                <Radio size={11} /> {displayAsset?.mqtt?.active ? "LIVE MQTT" : "SIM ENGINE"}
-              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {expandedPane === "flowsheet"
+                  ? <><polyline points="15 18 9 12 15 6"/><polyline points="8 18 14 12 8 6"/></>
+                  : <><polyline points="9 18 15 12 9 6"/><line x1="17" y1="6" x2="17" y2="18"/></>}
+              </svg>
+            </button>
+
+            {/* Vertical divider line */}
+            <div style={{ width: "1px", height: "32px", background: "linear-gradient(to bottom, transparent, #2a384e, transparent)" }} />
+
+            {/* Expand Knowledge Graph button */}
+            <button
+              onClick={() => setExpandedPane(expandedPane === "graph" ? null : "graph")}
+              title={expandedPane === "graph" ? "Restore split view" : "Expand Knowledge Graph"}
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "8px",
+                background: expandedPane === "graph" ? "rgba(0,240,255,0.25)" : "rgba(14,20,32,0.92)",
+                backdropFilter: "blur(10px)",
+                WebkitBackdropFilter: "blur(10px)",
+                border: `1px solid ${expandedPane === "graph" ? "#00f0ff" : "#2a384e"}`,
+                color: expandedPane === "graph" ? "#00f0ff" : "#64748b",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                boxShadow: expandedPane === "graph" ? "0 0 12px rgba(0,240,255,0.3)" : "0 2px 8px rgba(0,0,0,0.5)",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                {expandedPane === "graph"
+                  ? <><polyline points="9 18 15 12 9 6"/><polyline points="16 18 10 12 16 6"/></>
+                  : <><polyline points="15 18 9 12 15 6"/><line x1="7" y1="6" x2="7" y2="18"/></>}
+              </svg>
+            </button>
+          </div>
+
+
+          <section
+            style={{
+              height: "100%",
+              width: "100%",
+              minWidth: 0,
+              minHeight: 0,
+              position: "relative",
+              overflow: "hidden",
+              background: "#0e1420",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
+              <KnowledgeGraphPage
+                onSelect={(tag) => loadAsset(tag, "graph")}
+                externalSelectedId={asset?.tag}
+              />
             </div>
+          </section>
 
-            {error && (
-              <div style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid #ef4444", color: "#fca5a5", padding: "0.5rem", borderRadius: "4px", fontSize: "0.75rem" }}>
-                {error}
-              </div>
-            )}
-
-            {displayAsset ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", width: "100%" }}>
-                <div
-                  style={{
-                    background: "#162032",
-                    padding: "0.6rem 0.75rem",
-                    borderRadius: "6px",
-                    borderLeft: "4px solid #00f0ff",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.2rem",
-                  }}
-                >
-                  <div style={{ fontSize: "1.15rem", fontWeight: "bold", color: "#00f0ff", letterSpacing: "0.5px" }}>{displayAsset.tag}</div>
-                  <div style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: "500" }}>{displayAsset.asset_type}</div>
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                  <div style={{ background: "#162032", border: "1px solid #1e293b", padding: "0.5rem 0.65rem", borderRadius: "5px" }}>
-                    <div style={{ color: "#94a3b8", fontSize: "0.72rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                      Material
-                    </div>
-                    <div style={{ color: "#f8fafc", fontSize: "0.85rem", fontWeight: "600", marginTop: "0.1rem" }}>
-                      {displayAsset.material || "N/A"}
-                    </div>
-                  </div>
-
-                  <div style={{ background: "#162032", border: "1px solid #1e293b", padding: "0.5rem 0.65rem", borderRadius: "5px" }}>
-                    <div style={{ color: "#94a3b8", fontSize: "0.72rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                      Source
-                    </div>
-                    <div style={{ fontSize: "0.85rem", marginTop: "0.1rem" }}>
-                      {renderSourceDestValue(displayAsset.source)}
-                    </div>
-                  </div>
-
-                  <div style={{ background: "#162032", border: "1px solid #1e293b", padding: "0.5rem 0.65rem", borderRadius: "5px" }}>
-                    <div style={{ color: "#94a3b8", fontSize: "0.72rem", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                      Destination
-                    </div>
-                    <div style={{ fontSize: "0.85rem", marginTop: "0.1rem" }}>
-                      {renderSourceDestValue(displayAsset.destination)}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style={{ fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: "700" }}>
-                    {hasLiveMetrics ? "LIVE METRICS" : "STREAM TELEMETRY"}
-                  </h3>
-
-                  {hasLiveMetrics && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "0.4rem", width: "100%" }}>
-                      {Object.entries(displayAsset.live_metrics).map(([key, val]) => (
-                        <MetricCard key={key} label={getDisplayMetricName(key)} value={val} unit={getMetricUnit(key)} />
-                      ))}
-                    </div>
-                  )}
-
-                  {hasDerivedMetrics && (
-                    <div style={{ marginTop: "0.75rem" }}>
-                      <h4 style={{ fontSize: "0.75rem", color: "#a855f7", marginBottom: "0.4rem", textTransform: "uppercase", fontWeight: "700" }}>
-                        DERIVED ENGINEERING KPIS
-                      </h4>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "0.4rem" }}>
-                        {Object.entries(displayAsset.derived_metrics).map(([key, val]) => (
-                          <MetricCard key={key} label={getDisplayMetricName(key)} value={val} unit={getMetricUnit(key)} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!hasLiveMetrics && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "0.4rem" }}>
-                      {hasIncomingStreams && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                          <div style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase" }}>
-                            Incoming Streams
-                          </div>
-                          {Object.entries(displayAsset.incoming_streams).map(([streamTag, metricsDict]) => (
-                            <div key={streamTag} style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "0.5rem", borderRadius: "6px" }}>
-                              <div style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: "700", marginBottom: "0.3rem" }}>
-                                Stream {streamTag}
-                              </div>
-                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.35rem" }}>
-                                {Object.entries(metricsDict).map(([colKey, val]) => (
-                                  <MetricCard key={colKey} label={getDisplayMetricName(colKey)} value={val} unit={getMetricUnit(colKey)} />
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {hasOutgoingStreams && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                          <div style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase" }}>
-                            Outgoing Streams
-                          </div>
-                          {Object.entries(displayAsset.outgoing_streams).map(([streamTag, metricsDict]) => (
-                            <div key={streamTag} style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "0.5rem", borderRadius: "6px" }}>
-                              <div style={{ color: "#38bdf8", fontSize: "0.75rem", fontWeight: "700", marginBottom: "0.3rem" }}>
-                                Stream {streamTag}
-                              </div>
-                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: "0.35rem" }}>
-                                {Object.entries(metricsDict).map(([colKey, val]) => (
-                                  <MetricCard key={colKey} label={getDisplayMetricName(colKey)} value={val} unit={getMetricUnit(colKey)} />
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div style={{ color: "#64748b", textAlign: "center", padding: "2rem 0", fontSize: "0.85rem" }}>
-                Select an asset on the flowsheet to inspect metrics.
-              </div>
-            )}
-          </aside>
-        </main>
-      ) : activeTab === "maintenance" ? (
-        <main
-          style={{
-            flex: 1,
-            height: "calc(100vh - 52px)",
-            maxHeight: "calc(100vh - 52px)",
-            overflowY: "auto",
-            boxSizing: "border-box",
-          }}
-        >
-          <MaintenancePage />
+          {/* FLOATING TELEMETRY INSPECTION DRAWER */}
+          <TelemetryPopoutDrawer
+            displayAsset={displayAsset}
+            error={error}
+            isOpen={showTelemetryDrawer}
+            selectionSource={selectionSource}
+            onClose={() => {
+              setShowTelemetryDrawer(false);
+              loadAsset(null);
+            }}
+            getDisplayMetricName={getDisplayMetricName}
+            getMetricUnit={getMetricUnit}
+            renderSourceDestValue={renderSourceDestValue}
+          />
         </main>
       ) : (
         <main
@@ -667,7 +745,7 @@ export default function App() {
             boxSizing: "border-box",
           }}
         >
-          <KnowledgeGraphPage />
+          <MaintenancePage />
         </main>
       )}
 
